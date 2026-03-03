@@ -4,7 +4,7 @@
 ## Author: YuXuan
 ## Version: 1.0.0
 ## SavedVariables: YuXuanToolboxDB
-
+## IconTexture: Interface\AddOns\YuXuanToolbox\Icon.tga
 Core.lua
 Modules/QuickChatBar.lua
 Modules/QuickChatUI.lua

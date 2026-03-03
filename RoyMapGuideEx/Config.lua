@@ -1035,7 +1035,7 @@ end
 -- 斜杠命令
 -- ========================================================================================================================
 SLASH_RoyMapGuide1 = "/rmg"
-SLASH_RoyMapGuideQuickAdd1 = "/yx"
+SLASH_RoyMapGuideQuickAdd1 = "/yxpin"
 SlashCmdList["RoyMapGuide"] = function()
     if Settings and mainCategory then
         Settings.OpenToCategory(mainCategory:GetID())

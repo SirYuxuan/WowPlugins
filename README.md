@@ -6,6 +6,7 @@
 
 - `RoyMapGuideEx/`：原版 RoyMapGuide 增强插件（整合了雨轩地图标点插件）
 - `YuXuanMapPoint/`：雨轩地图标点（独立插件）
+- `YuXuanToolbox`: 雨轩工具箱
 
 ## 安装方式
 
@@ -17,5 +18,6 @@
 
 - `RoyMapGuide`
 - `YuXuanMapPoint`
+- `YuXuanToolbox`
 
 每个插件目录内都有自己的 README。

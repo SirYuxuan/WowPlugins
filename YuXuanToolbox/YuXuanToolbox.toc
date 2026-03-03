@@ -1,0 +1,10 @@
+## Interface: 120000, 120001
+## Title: 雨轩工具箱
+## Notes: 快捷频道切换、自定义指令按钮
+## Author: YuXuan
+## Version: 1.0.0
+## SavedVariables: YuXuanToolboxDB
+
+Core.lua
+Modules/QuickChatBar.lua
+Modules/QuickChatUI.lua

@@ -23,6 +23,13 @@
         "MinimalSliderWithSteppersMixin",
         "CreateSettingsCheckboxSliderInitializer",
         "CreateSettingsCheckboxDropdownInitializer",
-        "CreateSettingsListSectionHeaderInitializer"
+        "CreateSettingsListSectionHeaderInitializer",
+        "UIDropDownMenu_SetWidth",
+        "UIDropDownMenu_Initialize",
+        "UIDropDownMenu_SetSelectedName",
+        "UIDropDownMenu_AddButton",
+        "UIDropDownMenu_CreateInfo",
+        "ChatFrame_OpenChat",
+        "DEFAULT_CHAT_FRAME"
     ]
 }

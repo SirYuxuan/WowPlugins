@@ -1023,6 +1023,84 @@ local function InitializeQuickWaypointInput()
 end
 
 -- ========================================================================================================================
+-- 坐标显示
+-- ========================================================================================================================
+local coordFrame
+
+local function CreateCoordDisplay()
+    if coordFrame then return end
+    if not WorldMapFrame then return end
+
+    local parent = WorldMapFrame.ScrollContainer or WorldMapFrame
+    coordFrame = CreateFrame("Frame", nil, parent)
+    coordFrame:SetSize(200, 36)
+    coordFrame:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 4, 4)
+    coordFrame:SetFrameStrata("HIGH")
+    coordFrame:SetFrameLevel(2500)
+
+    local bg = coordFrame:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.55)
+
+    coordFrame.playerText = coordFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    coordFrame.playerText:SetPoint("TOPLEFT", 6, -4)
+    coordFrame.playerText:SetTextColor(0.2, 1, 0.73)
+    coordFrame.playerText:SetText("玩家: --")
+
+    coordFrame.cursorText = coordFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    coordFrame.cursorText:SetPoint("TOPLEFT", 6, -18)
+    coordFrame.cursorText:SetTextColor(1, 0.82, 0)
+    coordFrame.cursorText:SetText("鼠标: --")
+
+    local elapsed = 0
+    coordFrame:SetScript("OnUpdate", function(self, dt)
+        elapsed = elapsed + dt
+        if elapsed < 0.05 then return end
+        elapsed = 0
+
+        -- 更新玩家坐标
+        local mapID = WorldMapFrame:GetMapID()
+        if mapID then
+            local pos = C_Map.GetPlayerMapPosition(mapID, "player")
+            if pos then
+                self.playerText:SetText(string.format("玩家: %.2f, %.2f", pos.x * 100, pos.y * 100))
+            else
+                self.playerText:SetText("玩家: --")
+            end
+        else
+            self.playerText:SetText("玩家: --")
+        end
+
+        -- 更新鼠标坐标
+        if WorldMapFrame.ScrollContainer and WorldMapFrame.ScrollContainer:IsMouseOver() then
+            local cursorX, cursorY = WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition()
+            if cursorX and cursorY and cursorX >= 0 and cursorX <= 1 and cursorY >= 0 and cursorY <= 1 then
+                self.cursorText:SetText(string.format("鼠标: %.2f, %.2f", cursorX * 100, cursorY * 100))
+            else
+                self.cursorText:SetText("鼠标: --")
+            end
+        else
+            self.cursorText:SetText("鼠标: --")
+        end
+    end)
+end
+
+local function ToggleCoordDisplay()
+    local c = cfg()
+    if not c then return end
+    if c.enableCoordDisplay then
+        CreateCoordDisplay()
+        if coordFrame and WorldMapFrame and WorldMapFrame:IsVisible() then
+            coordFrame:Show()
+        end
+    else
+        if coordFrame then
+            coordFrame:Hide()
+        end
+    end
+end
+
+-- ========================================================================================================================
 -- 初始化和事件
 -- ========================================================================================================================
 local mapMarkerHooked = false
@@ -1033,6 +1111,7 @@ local function InitializeMapMarkers()
 
     WorldMapFrame:HookScript("OnShow", function()
         MapMarkers:UpdateMapMarkers(true)
+        ToggleCoordDisplay()
     end)
     WorldMapFrame:HookScript("OnHide", function()
         MapMarkers:ClearAllMarkers()
@@ -1124,6 +1203,10 @@ function Core:ToggleMapMarkers()
     else
         MapMarkers:ClearAllMarkers()
     end
+end
+
+function Core:ToggleCoordDisplay()
+    ToggleCoordDisplay()
 end
 
 function Core:ShowQuickAddPopup()

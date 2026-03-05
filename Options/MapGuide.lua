@@ -312,6 +312,25 @@ function ns.BuildMapGuideOptions()
                         end,
                     },
 
+                    -- 坐标显示
+                    headerCoordDisplay = {
+                        type = "header",
+                        name = "坐标显示",
+                        order = 15,
+                    },
+                    enableCoordDisplay = {
+                        type = "toggle",
+                        name = "启用坐标显示",
+                        desc = "在地图左下角显示当前玩家坐标和鼠标所在坐标",
+                        order = 16,
+                        width = 1.2,
+                        get = function() return MGcfg().enableCoordDisplay end,
+                        set = function(_, v)
+                            MGcfg().enableCoordDisplay = v
+                            Core:ToggleCoordDisplay()
+                        end,
+                    },
+
                     -- 标记类型开关
                     headerTypes = {
                         type = "header",

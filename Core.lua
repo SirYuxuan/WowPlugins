@@ -152,6 +152,7 @@ Core.DEFAULTS = {
         },
         mapGuide = {
             enableMapMarkers = false,
+            enableCoordDisplay = false,
             globalMarkerSize = 14,
             mapMarkerType = "TEXT",
             mapMarkerTextOutline = "OUTLINE",
@@ -391,6 +392,9 @@ function Core:ApplyAllSettings()
     end
     if self.ToggleMapMarkers then
         self:ToggleMapMarkers()
+    end
+    if self.ToggleCoordDisplay then
+        self:ToggleCoordDisplay()
     end
     self:UpdateMinimapIcon()
 end

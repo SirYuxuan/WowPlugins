@@ -1,6 +1,6 @@
 local addonName, ns = ...
 
-local VERSION = "1.3.0"
+local VERSION = "1.3.1"
 
 local AceDB = LibStub("AceDB-3.0")
 local LibDataBroker = LibStub("LibDataBroker-1.1")

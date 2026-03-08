@@ -282,16 +282,21 @@ function Core:ShowMiscPopupMenu(anchor, menuType, title, entries, onSelect)
             local info = UIDropDownMenu_CreateInfo()
             local itemText = entry.name or ""
             if entry.icon then
-                itemText = string.format("|T%s:14:14:0:0|t　%s", entry.icon, itemText)
+                if menuType == "spec" then
+                    itemText = string.format("   |T%s:14:14:0:0|t %s", entry.icon, itemText)
+                else
+                    itemText = string.format("  |T%s:14:14:0:0|t %s", entry.icon, itemText)
+                end
             else
-                itemText = "　　  " .. itemText
+                local textGap = menuType == "talent" and "  " or "    "
+                itemText = textGap .. itemText
             end
             info.text = itemText
-            info.checked = entry.active or false
+            info.checked = entry.checked or entry.active or false
             info.disabled = not not entry.disabled
             info.keepShownOnClick = false
             info.func = function()
-                if entry.active or not onSelect then
+                if entry.current or (menuType ~= "talent" and entry.active) or not onSelect then
                     Core:HideMiscPopupMenu()
                     return
                 end
@@ -360,7 +365,8 @@ function Core:GetTalentLoadouts()
     if not specID then return entries end
 
     local state = self:GetTalentLoadoutState()
-    local activeConfigID = state.activeConfigID or state.displayConfigID
+    local activeConfigID = state.activeConfigID
+    local displayConfigID = state.displayConfigID or activeConfigID
     local selectedConfigID = state.selectedConfigID
 
     local configIDs = C_ClassTalents.GetConfigIDsBySpecID(specID) or {}
@@ -373,23 +379,15 @@ function Core:GetTalentLoadouts()
             end
         end
 
-        if selectedConfigID and activeConfigID and selectedConfigID ~= activeConfigID and configID == selectedConfigID then
-            name = name .. " |cFFFFCC00(目标)|r"
-        end
-
         table.insert(entries, {
             id = configID,
             name = name,
-            active = configID == activeConfigID,
+            active = configID == displayConfigID,
+            checked = configID == displayConfigID,
+            current = configID == activeConfigID,
+            selected = configID == selectedConfigID,
         })
     end
-
-    table.sort(entries, function(a, b)
-        if a.active ~= b.active then
-            return a.active
-        end
-        return a.name < b.name
-    end)
 
     return entries
 end
@@ -418,19 +416,25 @@ function Core:GetTalentLoadoutState()
 
     if IsFunctionAvailable(C_ClassTalents, "GetActiveConfigID") then
         activeConfigID = C_ClassTalents.GetActiveConfigID()
+        if activeConfigID and not savedConfigIDs[activeConfigID] then
+            activeConfigID = nil
+        end
     end
 
     if specID and IsFunctionAvailable(C_ClassTalents, "GetLastSelectedSavedConfigID") then
         selectedConfigID = C_ClassTalents.GetLastSelectedSavedConfigID(specID)
+        if selectedConfigID and not savedConfigIDs[selectedConfigID] then
+            selectedConfigID = nil
+        end
     end
 
     local displayConfigID = nil
-    if activeConfigID and savedConfigIDs[activeConfigID] then
-        displayConfigID = activeConfigID
-    elseif selectedConfigID and savedConfigIDs[selectedConfigID] then
+    if selectedConfigID and savedConfigIDs[selectedConfigID] then
         displayConfigID = selectedConfigID
+    elseif activeConfigID and savedConfigIDs[activeConfigID] then
+        displayConfigID = activeConfigID
     else
-        displayConfigID = activeConfigID or selectedConfigID
+        displayConfigID = selectedConfigID or activeConfigID
     end
 
     return {
@@ -451,32 +455,23 @@ function Core:GetCurrentTalentLoadoutName()
         return nil
     end
 
-    local activeName = GetConfigName(state.activeConfigID)
-    local selectedName = GetConfigName(state.selectedConfigID)
     local displayName = GetConfigName(state.displayConfigID)
-
-    if activeName and selectedName and state.activeConfigID and state.selectedConfigID and state.activeConfigID ~= state.selectedConfigID then
-        return string.format("%s → %s", activeName, selectedName)
-    end
 
     if displayName then
         return displayName
     end
 
+    local activeName = GetConfigName(state.activeConfigID)
     if activeName then
         return activeName
     end
 
+    local selectedName = GetConfigName(state.selectedConfigID)
     if selectedName then
         return selectedName
     end
 
     local loadouts = self:GetTalentLoadouts()
-    for _, entry in ipairs(loadouts) do
-        if entry.active then
-            return entry.name
-        end
-    end
     if #loadouts > 0 then
         return loadouts[1].name
     end
@@ -499,7 +494,7 @@ end
 
 function Core:GetActiveTalentConfigID()
     local state = self:GetTalentLoadoutState()
-    return state.activeConfigID or state.displayConfigID
+    return state.activeConfigID
 end
 
 function Core:ApplyTalentLoadout(configID)
@@ -632,6 +627,8 @@ end
 local flashElapsed = 0
 local flashVisible = true
 local FLASH_INTERVAL = 0.5
+local statePollElapsed = 0
+local STATE_POLL_INTERVAL = 1.0
 
 local function UpdateDurabilityFlash(dt)
     flashElapsed = flashElapsed + dt
@@ -899,6 +896,7 @@ function Core:CreateMiscBar()
 
     -- ── 闪烁定时器 ──
     frame:SetScript("OnUpdate", function(_, dt)
+        statePollElapsed = statePollElapsed + dt
         local durabilityPercent = select(1, Core:GetDurabilityEntries())
         if durabilityPercent < 60 then
             UpdateDurabilityFlash(dt)
@@ -907,6 +905,11 @@ function Core:CreateMiscBar()
             -- 重置闪烁状态
             flashVisible = true
             flashElapsed = 0
+        end
+
+        if statePollElapsed >= STATE_POLL_INTERVAL then
+            statePollElapsed = statePollElapsed - STATE_POLL_INTERVAL
+            Core:UpdateMiscBarLayout()
         end
     end)
 

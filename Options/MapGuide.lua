@@ -496,6 +496,8 @@ function ns.BuildMapGuideOptions()
                         type = "group",
                         name = "",
                         order = 41,
+                        inline = true,
+                        width = "full",
                         args = BuildCityArgs({
                             { "Stormwind", "暴风城" },
                             { "Ironforge", "铁炉堡" },
@@ -518,6 +520,8 @@ function ns.BuildMapGuideOptions()
                         type = "group",
                         name = "",
                         order = 51,
+                        inline = true,
+                        width = "full",
                         args = BuildCityArgs({
                             { "Orgrimmar", "奥格瑞玛" },
                             { "ThunderBluff", "雷霆崖" },
@@ -537,6 +541,8 @@ function ns.BuildMapGuideOptions()
                         type = "group",
                         name = "",
                         order = 61,
+                        inline = true,
+                        width = "full",
                         args = BuildCityArgs({
                             { "Shattrath", "沙塔斯" },
                             { "DalaranNorthrend", "达拉然（诺森德）" },
@@ -565,6 +571,8 @@ function ns.BuildMapGuideOptions()
                         type = "group",
                         name = "",
                         order = 71,
+                        inline = true,
+                        width = "full",
                         args = BuildCityArgs({
                             { "Darkmoonfaire", "暗月马戏团" },
                             { "IsleofDorn", "多恩岛" },

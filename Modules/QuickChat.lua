@@ -366,7 +366,7 @@ function Core:CreateQuickChatBar()
     if self.barFrame then return end
 
     local f = CreateFrame("Frame", self.NAME .. "QuickChatBar", UIParent)
-    f:SetFrameStrata("HIGH")
+    f:SetFrameStrata("LOW")
 
     f.bg = f:CreateTexture(nil, "BACKGROUND")
     f.bg:SetAllPoints(f)

@@ -10,7 +10,7 @@ local QUICK_LEAVE_MIN_SIZE = 24
 local QUICK_LEAVE_MAX_SIZE = 64
 local QUICK_LEAVE_DEFAULT_SIZE = 36
 local QUICK_LEAVE_TEXTURE = "Interface\\Buttons\\UI-GroupLoot-Pass-Up"
-local DELVE_WIDGET_TYPE = 29 -- Enum.UIWidgetVisualizationType.ScenarioHeaderDelves
+local DELVE_WIDGET_TYPE = Enum and Enum.UIWidgetVisualizationType and Enum.UIWidgetVisualizationType.ScenarioHeaderDelves or 29
 local MENU_WIDTH = 220
 local MENU_TITLE_HEIGHT = 24
 local MENU_ITEM_HEIGHT = 22
@@ -267,11 +267,6 @@ function Core:SaveMiscBarPosition()
     pos.y = math.floor((y or 0) + 0.5)
 end
 
-local function ClampQuickLeaveSize(size)
-    size = tonumber(size) or QUICK_LEAVE_DEFAULT_SIZE
-    return math.max(QUICK_LEAVE_MIN_SIZE, math.min(QUICK_LEAVE_MAX_SIZE, size))
-end
-
 function Core:SaveQuickLeavePosition()
     if not self.quickLeaveFrame then return end
     local point, _, relativePoint, x, y = self.quickLeaveFrame:GetPoint(1)
@@ -289,7 +284,8 @@ function Core:IsInDelve()
     end
 
     if type(C_DelvesUI) == "table" then
-        for _, fnName in ipairs({ "IsDelveActive", "IsActiveDelve", "IsActive" }) do
+        -- 不同版本/环境里公开的地下堡检测函数名并不完全一致，这里按优先级尝试。
+        for _, fnName in ipairs({ "IsDelveActive", "IsActiveDelve" }) do
             local fn = C_DelvesUI[fnName]
             if type(fn) == "function" then
                 local ok, result = pcall(fn)
@@ -301,7 +297,7 @@ function Core:IsInDelve()
     end
 
     local scenarioType = C_Scenario and C_Scenario.GetScenarioType and C_Scenario.GetScenarioType()
-    if scenarioType and scenarioType ~= 0 and LE_SCENARIO_TYPE_DELVE and scenarioType == LE_SCENARIO_TYPE_DELVE then
+    if LE_SCENARIO_TYPE_DELVE and scenarioType == LE_SCENARIO_TYPE_DELVE then
         return true
     end
 
@@ -323,8 +319,20 @@ function Core:IsInDelve()
     return false
 end
 
+function Core:RefreshQuickLeaveDelveState()
+    self.quickLeaveInDelve = self:IsInDelve()
+    return self.quickLeaveInDelve
+end
+
 function Core:LeaveCurrentDelve()
-    if not self:IsInDelve() then return end
+    if not self:RefreshQuickLeaveDelveState() then return end
+
+    if C_PartyInfo and C_PartyInfo.ConfirmLeaveParty then
+        local ok, result = pcall(C_PartyInfo.ConfirmLeaveParty)
+        if ok and result ~= false then
+            return
+        end
+    end
 
     if C_PartyInfo and C_PartyInfo.LeaveParty then
         C_PartyInfo.LeaveParty()
@@ -337,7 +345,8 @@ function Core:UpdateQuickLeaveLayout()
     if not self.quickLeaveFrame then return end
 
     local cfg = MIcfg()
-    local size = ClampQuickLeaveSize(cfg.quickLeaveSize)
+    local size = tonumber(cfg.quickLeaveSize) or QUICK_LEAVE_DEFAULT_SIZE
+    size = math.max(QUICK_LEAVE_MIN_SIZE, math.min(QUICK_LEAVE_MAX_SIZE, size))
     cfg.quickLeaveSize = size
 
     self.quickLeaveFrame:SetMovable(not cfg.quickLeaveLocked)
@@ -357,7 +366,7 @@ function Core:UpdateQuickLeaveVisibility()
     if not self.quickLeaveFrame then return end
 
     local cfg = MIcfg()
-    local inDelve = self:IsInDelve()
+    local inDelve = self:RefreshQuickLeaveDelveState()
     local shouldShow = cfg.quickLeaveEnabled and (inDelve or not cfg.quickLeaveLocked)
 
     if shouldShow then
@@ -1058,7 +1067,7 @@ function Core:CreateMiscBar()
         Core:SetTooltipAnchor(GameTooltip, self, "ANCHOR_LEFT")
         GameTooltip:AddLine("快速离开地下堡", 1, 0.82, 0)
         GameTooltip:AddLine(" ")
-        if Core:IsInDelve() then
+        if Core.quickLeaveInDelve then
             GameTooltip:AddLine("左键：直接离开当前地下堡", 0.75, 1, 0.75)
         else
             GameTooltip:AddLine("当前不在地下堡中", 0.7, 0.7, 0.7)
@@ -1077,15 +1086,19 @@ function Core:CreateMiscBar()
     -- ── 事件帧 ──
     self.miscEventFrame = CreateFrame("Frame")
     self.miscEventFrame:SetScript("OnEvent", function(_, event, ...)
-        if event == "PLAYER_ENTERING_WORLD"
-            or event == "PLAYER_SPECIALIZATION_CHANGED"
+        if event == "PLAYER_ENTERING_WORLD" then
+            Core:UpdateMiscBarLayout()
+            Core:UpdateQuickLeaveVisibility()
+            return
+        end
+
+        if event == "PLAYER_SPECIALIZATION_CHANGED"
             or event == "ACTIVE_TALENT_GROUP_CHANGED"
             or event == "TRAIT_CONFIG_UPDATED"
             or event == "TRAIT_CONFIG_LIST_UPDATED"
             or event == "UPDATE_INVENTORY_DURABILITY"
             or event == "PLAYER_EQUIPMENT_CHANGED" then
             Core:UpdateMiscBarLayout()
-            Core:UpdateQuickLeaveVisibility()
             return
         end
 

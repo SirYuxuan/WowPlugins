@@ -150,7 +150,12 @@ local function GetOptions()
         childGroups = "tree",
         args = {
             quickChat = ns.BuildQuickChatOptions(),
-            misc = ns.BuildMiscOptions(),
+            distanceMonitor = ns.BuildDistanceMonitorOptions(),
+            questTools = ns.BuildQuestToolsOptions(),
+            infoBar = ns.BuildInfoBarOptions(),
+            delveQuickLeave = ns.BuildDelveQuickLeaveOptions(),
+            raidMarkers = ns.BuildRaidMarkersOptions(),
+            tooltip = ns.BuildTooltipOptions(),
             attribute = ns.BuildAttributeOptions(),
             currency = ns.BuildCurrencyOptions(),
             levelingTip = ns.BuildLevelingTipOptions(),

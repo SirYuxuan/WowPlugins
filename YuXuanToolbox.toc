@@ -12,6 +12,7 @@ Utils.lua
 Core.lua
 Modules\QuickChat.lua
 Modules\Misc.lua
+Modules\DistanceMonitor.lua
 Modules\AttributeDisplay.lua
 Modules\CurrencyDisplay.lua
 Modules\CastBar.lua
@@ -19,7 +20,8 @@ Modules\MapGuideData.lua
 Modules\MapGuide.lua
 Options\Shared.lua
 Options\QuickChat.lua
-Options\Misc.lua
+Options\MiscSplit.lua
+Options\DistanceMonitor.lua
 Options\Attribute.lua
 Options\Currency.lua
 Options\LevelingTip.lua

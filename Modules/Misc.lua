@@ -11,6 +11,13 @@ local DELVE_QUICK_LEAVE_DEFAULT_SIZE = 40
 local DELVE_QUICK_LEAVE_MIN_SIZE = 24
 local DELVE_QUICK_LEAVE_MAX_SIZE = 72
 local DELVE_QUICK_LEAVE_ICON = "Interface\\Icons\\spell_arcane_teleportdalaran"
+local RAID_MARKERS_DEFAULT_SIZE = 28
+local RAID_MARKERS_MIN_SIZE = 20
+local RAID_MARKERS_MAX_SIZE = 48
+local RAID_MARKERS_DEFAULT_SPACING = 6
+local RAID_MARKERS_DEFAULT_COUNTDOWN = 6
+local RAID_MARKERS_BUTTON_PADDING = 4
+local RAID_MARKERS_BUTTON_BORDER = 1
 local MENU_WIDTH = 220
 local MENU_TITLE_HEIGHT = 24
 local MENU_ITEM_HEIGHT = 22
@@ -26,6 +33,41 @@ local DURABILITY_SLOTS = {
     [10] = "手部",
     [16] = "主手",
     [17] = "副手",
+}
+
+local RAID_TARGET_BUTTONS = {
+    { key = "STAR", index = 1, label = "星星", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1" },
+    { key = "CIRCLE", index = 2, label = "大饼", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_2" },
+    { key = "DIAMOND", index = 3, label = "钻石", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_3" },
+    { key = "TRIANGLE", index = 4, label = "三角", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_4" },
+    { key = "MOON", index = 5, label = "月亮", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_5" },
+    { key = "SQUARE", index = 6, label = "方块", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_6" },
+    { key = "CROSS", index = 7, label = "叉叉", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_7" },
+    { key = "SKULL", index = 8, label = "骷髅", texture = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8" },
+}
+
+local RAID_ACTION_BUTTONS = {
+    {
+        key = "CLEAR",
+        label = "清",
+        texture = "Interface\\Buttons\\UI-GroupLoot-Pass-Up",
+        tooltipTitle = "清除标记",
+        tooltipText = "清除当前目标的团队标记。",
+    },
+    {
+        key = "READY",
+        label = "就",
+        texture = "Interface\\RaidFrame\\ReadyCheck-Ready",
+        tooltipTitle = "团队就位",
+        tooltipText = "发起就位确认。",
+    },
+    {
+        key = "COUNTDOWN",
+        label = "倒",
+        texture = nil,
+        tooltipTitle = "倒计时",
+        tooltipText = "按设定秒数发起团队倒计时。",
+    },
 }
 
 local function MIcfg()
@@ -51,6 +93,40 @@ local function MIcfg()
     if cfg.questToolsOrientation ~= "VERTICAL" then
         cfg.questToolsOrientation = "HORIZONTAL"
     end
+    if cfg.raidMarkersEnabled == nil then
+        cfg.raidMarkersEnabled = false
+    end
+    if cfg.raidMarkersLocked == nil then
+        cfg.raidMarkersLocked = true
+    end
+    if cfg.raidMarkersOrientation ~= "VERTICAL" then
+        cfg.raidMarkersOrientation = "HORIZONTAL"
+    end
+    if cfg.raidMarkersSpacing == nil then
+        cfg.raidMarkersSpacing = RAID_MARKERS_DEFAULT_SPACING
+    end
+    if cfg.raidMarkersIconSize == nil then
+        cfg.raidMarkersIconSize = RAID_MARKERS_DEFAULT_SIZE
+    end
+    if cfg.raidMarkersCountdown == nil then
+        cfg.raidMarkersCountdown = RAID_MARKERS_DEFAULT_COUNTDOWN
+    end
+    if cfg.raidMarkersShowBackground == nil then
+        cfg.raidMarkersShowBackground = true
+    end
+    if cfg.raidMarkersShowBorder == nil then
+        cfg.raidMarkersShowBorder = true
+    end
+    if type(cfg.raidMarkersBackgroundColor) ~= "table" then
+        cfg.raidMarkersBackgroundColor = { r = 0, g = 0, b = 0, a = 0.35 }
+    elseif cfg.raidMarkersBackgroundColor.a == nil then
+        cfg.raidMarkersBackgroundColor.a = 0.35
+    end
+    if type(cfg.raidMarkersBorderColor) ~= "table" then
+        cfg.raidMarkersBorderColor = { r = 0, g = 0.6, b = 1, a = 0.45 }
+    elseif cfg.raidMarkersBorderColor.a == nil then
+        cfg.raidMarkersBorderColor.a = 0.45
+    end
     if type(cfg.textColor) ~= "table" then
         cfg.textColor = { r = 1, g = 1, b = 1 }
     end
@@ -69,6 +145,14 @@ local function MIcfg()
             relativePoint = "CENTER",
             x = 0,
             y = -110,
+        }
+    end
+    if not cfg.raidMarkersPoint then
+        cfg.raidMarkersPoint = {
+            point = "CENTER",
+            relativePoint = "CENTER",
+            x = 0,
+            y = -30,
         }
     end
     if cfg.delveQuickLeaveEnabled == nil then
@@ -173,6 +257,130 @@ local function GetVisibleQuestToolsButtons(frame)
     return buttons
 end
 
+local function GetVisibleRaidMarkersButtons(frame)
+    local buttons = {}
+    if not frame or not frame.buttons then
+        return buttons
+    end
+
+    for _, button in ipairs(frame.buttons) do
+        table.insert(buttons, button)
+    end
+
+    return buttons
+end
+
+local function CreateSimpleOutline(parent, layer, thickness)
+    local border = {}
+    local size = thickness or 1
+
+    border.top = parent:CreateTexture(nil, layer or "BORDER")
+    border.top:SetPoint("TOPLEFT", parent, "TOPLEFT", -size, size)
+    border.top:SetPoint("TOPRIGHT", parent, "TOPRIGHT", size, size)
+    border.top:SetHeight(size)
+
+    border.bottom = parent:CreateTexture(nil, layer or "BORDER")
+    border.bottom:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", -size, -size)
+    border.bottom:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", size, -size)
+    border.bottom:SetHeight(size)
+
+    border.left = parent:CreateTexture(nil, layer or "BORDER")
+    border.left:SetPoint("TOPLEFT", parent, "TOPLEFT", -size, size)
+    border.left:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", -size, -size)
+    border.left:SetWidth(size)
+
+    border.right = parent:CreateTexture(nil, layer or "BORDER")
+    border.right:SetPoint("TOPRIGHT", parent, "TOPRIGHT", size, size)
+    border.right:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", size, -size)
+    border.right:SetWidth(size)
+
+    return border
+end
+
+local function SetSimpleOutlineColor(border, r, g, b, a)
+    if type(border) ~= "table" then return end
+    for _, edge in pairs(border) do
+        edge:SetColorTexture(r or 0, g or 0, b or 0, a or 0)
+    end
+end
+
+local function SetRaidMarkerButtonHoverTarget(button, targetScale)
+    if not button then return end
+    button._hoverTargetScale = targetScale or 1
+    if button._hoverAnimating then
+        return
+    end
+
+    button._hoverAnimating = true
+    button:SetScript("OnUpdate", function(self, elapsed)
+        local current = self._hoverScale or 1
+        local target = self._hoverTargetScale or 1
+        local nextScale = current + (target - current) * math.min(1, elapsed * 7)
+
+        if math.abs(target - nextScale) < 0.01 then
+            nextScale = target
+        end
+
+        self._hoverScale = nextScale
+        self:SetScale(nextScale)
+
+        if nextScale == target then
+            self._hoverAnimating = false
+            self:SetScript("OnUpdate", nil)
+        end
+    end)
+end
+
+local function GetRaidMarkerMacroText(buttonInfo, countdownSeconds)
+    if not buttonInfo or not buttonInfo.key then
+        return nil, nil
+    end
+
+    if buttonInfo.index then
+        return "/tm 0\n/tm " .. tostring(buttonInfo.index), "/tm 0"
+    end
+
+    if buttonInfo.key == "CLEAR" then
+        return "/tm 0", nil
+    elseif buttonInfo.key == "READY" then
+        return "/readycheck", nil
+    elseif buttonInfo.key == "COUNTDOWN" then
+        local seconds = math.max(3, math.min(15, tonumber(countdownSeconds) or RAID_MARKERS_DEFAULT_COUNTDOWN))
+        return
+            "/run if C_PartyInfo and C_PartyInfo.DoCountdown then C_PartyInfo.DoCountdown(" ..
+            seconds .. ") elseif DoCountdown then DoCountdown(" .. seconds .. ") end", nil
+    end
+
+    return nil, nil
+end
+
+function Core:ScheduleAutoQuestSweep(onlyCompleted, remainingPasses)
+    if not self.ProcessAutoQuestDialogs then
+        return
+    end
+
+    local passes = tonumber(remainingPasses) or 12
+    if passes <= 0 then
+        return
+    end
+
+    if not (C_Timer and C_Timer.After) then
+        self:ProcessAutoQuestDialogs(onlyCompleted)
+        return
+    end
+
+    C_Timer.After(0.15, function()
+        if not Core or not Core.ProcessAutoQuestDialogs then
+            return
+        end
+
+        local handled = Core:ProcessAutoQuestDialogs(onlyCompleted)
+        if handled then
+            Core:ScheduleAutoQuestSweep(onlyCompleted, passes - 1)
+        end
+    end)
+end
+
 local function GetConfiguredDelveQuickLeaveIcon()
     local cfg = MIcfg()
     local icon = cfg.delveQuickLeaveCustomIcon
@@ -246,6 +454,49 @@ local function GetPlayerMaxLevelSafe()
         return fallbackMaxLevel
     end
     return 80
+end
+
+local function ProcessLegacyGreetingQuests(selectCompletedOnly)
+    if type(GetNumActiveQuests) == "function" and type(SelectActiveQuest) == "function" then
+        local activeCount = GetNumActiveQuests() or 0
+        for index = 1, activeCount do
+            local _, isComplete = GetActiveTitle(index)
+            if isComplete then
+                SelectActiveQuest(index)
+                return true
+            end
+        end
+    end
+
+    if not selectCompletedOnly and type(GetNumAvailableQuests) == "function" and type(SelectAvailableQuest) == "function" then
+        local availableCount = GetNumAvailableQuests() or 0
+        if availableCount > 0 then
+            SelectAvailableQuest(1)
+            return true
+        end
+    end
+
+    return false
+end
+
+local function GetGossipQuestIdentifier(info)
+    if type(info) ~= "table" then
+        return nil
+    end
+    return info.questID or info.id or info.index
+end
+
+local function IsGossipQuestComplete(info)
+    if type(info) ~= "table" then
+        return false
+    end
+    if info.isComplete ~= nil then
+        return info.isComplete == true
+    end
+    if info.questID and C_QuestLog and C_QuestLog.IsComplete then
+        return C_QuestLog.IsComplete(info.questID) == true
+    end
+    return false
 end
 
 -- ═══════════════════════════════════════════════════
@@ -437,16 +688,57 @@ function Core:HandleMiscQuestEvent(event, ...)
         if AcceptQuest then
             AcceptQuest()
         end
+        self:ScheduleAutoQuestSweep(false)
     elseif event == "QUEST_PROGRESS" then
         if IsQuestCompletable and IsQuestCompletable() and CompleteQuest then
             CompleteQuest()
         end
+        self:ScheduleAutoQuestSweep(true)
     elseif event == "QUEST_COMPLETE" then
         local numChoices = GetNumQuestChoices and GetNumQuestChoices() or 0
-        if numChoices <= 1 and GetQuestReward then
+        if GetQuestReward then
             GetQuestReward(math.max(1, numChoices))
         end
+        self:ScheduleAutoQuestSweep(false)
+    elseif event == "GOSSIP_SHOW" or event == "QUEST_GREETING" then
+        self:ProcessAutoQuestDialogs(false)
+        self:ScheduleAutoQuestSweep(false)
     end
+end
+
+function Core:ProcessAutoQuestDialogs(onlyCompleted)
+    local cfg = MIcfg()
+    if not cfg.autoQuestTurnIn then
+        return false
+    end
+
+    if C_GossipInfo then
+        if type(C_GossipInfo.GetActiveQuests) == "function" and type(C_GossipInfo.SelectActiveQuest) == "function" then
+            local activeQuests = C_GossipInfo.GetActiveQuests() or {}
+            for _, info in ipairs(activeQuests) do
+                if IsGossipQuestComplete(info) then
+                    local questIdentifier = GetGossipQuestIdentifier(info)
+                    if questIdentifier then
+                        C_GossipInfo.SelectActiveQuest(questIdentifier)
+                        return true
+                    end
+                end
+            end
+        end
+
+        if not onlyCompleted and type(C_GossipInfo.GetAvailableQuests) == "function"
+            and type(C_GossipInfo.SelectAvailableQuest) == "function" then
+            local availableQuests = C_GossipInfo.GetAvailableQuests() or {}
+            local firstQuest = availableQuests[1]
+            local questIdentifier = GetGossipQuestIdentifier(firstQuest)
+            if questIdentifier then
+                C_GossipInfo.SelectAvailableQuest(questIdentifier)
+                return true
+            end
+        end
+    end
+
+    return ProcessLegacyGreetingQuests(onlyCompleted)
 end
 
 function Core:UpdateMiscEventRegistration()
@@ -463,6 +755,8 @@ function Core:UpdateMiscEventRegistration()
         self.miscEventFrame:RegisterEvent("QUEST_DETAIL")
         self.miscEventFrame:RegisterEvent("QUEST_PROGRESS")
         self.miscEventFrame:RegisterEvent("QUEST_COMPLETE")
+        self.miscEventFrame:RegisterEvent("GOSSIP_SHOW")
+        self.miscEventFrame:RegisterEvent("QUEST_GREETING")
     end
 
     self.miscEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -496,6 +790,16 @@ function Core:SaveQuestToolsPosition()
     if not self.questToolsFrame then return end
     local point, _, relativePoint, x, y = self.questToolsFrame:GetPoint(1)
     local pos = MIcfg().questToolsPoint
+    pos.point = point or "CENTER"
+    pos.relativePoint = relativePoint or "CENTER"
+    pos.x = math.floor((x or 0) + 0.5)
+    pos.y = math.floor((y or 0) + 0.5)
+end
+
+function Core:SaveRaidMarkersPosition()
+    if not self.raidMarkersFrame then return end
+    local point, _, relativePoint, x, y = self.raidMarkersFrame:GetPoint(1)
+    local pos = MIcfg().raidMarkersPoint
     pos.point = point or "CENTER"
     pos.relativePoint = relativePoint or "CENTER"
     pos.x = math.floor((x or 0) + 0.5)
@@ -558,6 +862,121 @@ function Core:IsInDelve()
     end
 
     return false
+end
+
+function Core:IsInHomeOrInstanceGroup()
+    if type(IsInGroup) ~= "function" then
+        return false
+    end
+
+    if IsInGroup() then
+        return true
+    end
+
+    if type(LE_PARTY_CATEGORY_HOME) == "number" and IsInGroup(LE_PARTY_CATEGORY_HOME) then
+        return true
+    end
+
+    if type(LE_PARTY_CATEGORY_INSTANCE) == "number" and IsInGroup(LE_PARTY_CATEGORY_INSTANCE) then
+        return true
+    end
+
+    return false
+end
+
+function Core:CanUseRaidLeaderAction()
+    if not self:IsInHomeOrInstanceGroup() then
+        return false, "需要先加入队伍或团队。"
+    end
+
+    if type(IsInRaid) == "function" and IsInRaid() then
+        local isLeader = type(UnitIsGroupLeader) == "function" and UnitIsGroupLeader("player")
+        local isAssistant = type(UnitIsGroupAssistant) == "function" and UnitIsGroupAssistant("player")
+        if not isLeader and not isAssistant then
+            return false, "团队中需要队长或助理权限。"
+        end
+    end
+
+    return true
+end
+
+function Core:PrintMiscMessage(message)
+    if type(print) == "function" then
+        print("|cFF33FF99雨轩工具箱|r：" .. (message or ""))
+    end
+end
+
+function Core:SetCurrentTargetRaidMarker(index)
+    local canUse, reason = self:CanUseRaidLeaderAction()
+    if not canUse then
+        self:PrintMiscMessage(reason)
+        return false
+    end
+
+    if type(UnitExists) == "function" and not UnitExists("target") then
+        self:PrintMiscMessage("请先选中一个目标。")
+        return false
+    end
+
+    local markerIndex = tonumber(index) or 0
+
+    if type(SetRaidTarget) == "function" then
+        SetRaidTarget("target", markerIndex)
+    elseif type(SetRaidTargetIcon) == "function" then
+        SetRaidTargetIcon("target", markerIndex)
+    else
+        self:PrintMiscMessage("当前版本不支持设置团队标记。")
+        return false
+    end
+
+    if type(GetRaidTargetIndex) == "function" then
+        local appliedIndex = GetRaidTargetIndex("target") or 0
+        if appliedIndex ~= markerIndex then
+            if markerIndex == 0 then
+                self:PrintMiscMessage("未能清除标记，请确认你有队长/助理权限。")
+            else
+                self:PrintMiscMessage("未能设置标记，请确认你有队长/助理权限，且当前在队伍或团队中。")
+            end
+            return false
+        end
+    end
+
+    return true
+end
+
+function Core:StartRaidReadyCheck()
+    local canUse, reason = self:CanUseRaidLeaderAction()
+    if not canUse then
+        self:PrintMiscMessage(reason)
+        return
+    end
+
+    if type(DoReadyCheck) == "function" then
+        DoReadyCheck()
+    else
+        self:PrintMiscMessage("当前版本不支持团队就位。")
+    end
+end
+
+function Core:StartRaidCountdown()
+    local canUse, reason = self:CanUseRaidLeaderAction()
+    if not canUse then
+        self:PrintMiscMessage(reason)
+        return
+    end
+
+    local seconds = math.max(3, math.min(15, tonumber(MIcfg().raidMarkersCountdown) or RAID_MARKERS_DEFAULT_COUNTDOWN))
+    if IsFunctionAvailable(C_PartyInfo, "DoCountdown") then
+        C_PartyInfo.DoCountdown(seconds)
+        return
+    end
+
+    if type(DoCountdown) == "function" then
+        DoCountdown(seconds)
+        return
+    end
+
+    self:PrintMiscMessage("当前版本不支持团队倒计时。")
 end
 
 function Core:LeaveDelve()
@@ -1528,6 +1947,117 @@ function Core:UpdateMiscBarVisibility()
     end
 end
 
+function Core:UpdateRaidMarkersLayout()
+    if not self.raidMarkersFrame then return end
+
+    local cfg = MIcfg()
+    local frame = self.raidMarkersFrame
+    local buttons = GetVisibleRaidMarkersButtons(frame)
+    local spacing = math.max(0, math.min(40, tonumber(cfg.raidMarkersSpacing) or RAID_MARKERS_DEFAULT_SPACING))
+    local iconSize = math.max(RAID_MARKERS_MIN_SIZE, math.min(RAID_MARKERS_MAX_SIZE,
+        tonumber(cfg.raidMarkersIconSize) or RAID_MARKERS_DEFAULT_SIZE))
+    local buttonSize = iconSize + RAID_MARKERS_BUTTON_PADDING * 2
+    local fontPath = LibSharedMedia:Fetch("font", cfg.font) or STANDARD_TEXT_FONT
+    local textSize = math.max(11, math.floor(iconSize * 0.45))
+    local bgColor = cfg.raidMarkersBackgroundColor or { r = 0, g = 0, b = 0, a = 0.35 }
+    local borderColor = cfg.raidMarkersBorderColor or { r = 0, g = 0.6, b = 1, a = 0.45 }
+    local totalWidth = 0
+    local totalHeight = 0
+
+    for index, button in ipairs(buttons) do
+        button:ClearAllPoints()
+        button:SetSize(buttonSize, buttonSize)
+
+        if not InCombatLockdown or not InCombatLockdown() then
+            local macro1, macro2 = GetRaidMarkerMacroText(button.buttonInfo, cfg.raidMarkersCountdown)
+            if macro1 then
+                button:SetAttribute("type1", "macro")
+                button:SetAttribute("macrotext1", macro1)
+            end
+            if macro2 then
+                button:SetAttribute("type2", "macro")
+                button:SetAttribute("macrotext2", macro2)
+            else
+                button:SetAttribute("type2", nil)
+                button:SetAttribute("macrotext2", nil)
+            end
+        end
+
+        if button.icon then
+            button.icon:ClearAllPoints()
+            button.icon:SetPoint("CENTER", button, "CENTER", 0, 0)
+            button.icon:SetSize(iconSize, iconSize)
+            if button.iconTexture then
+                button.icon:SetTexture(button.iconTexture)
+                button.icon:Show()
+            else
+                button.icon:SetTexture(nil)
+                button.icon:Hide()
+            end
+        end
+
+        if button.label then
+            button.label:SetFont(fontPath, textSize, "OUTLINE")
+            button.label:SetText(button.textValue or "")
+            if (not button.iconTexture) and button.textValue and button.textValue ~= "" then
+                button.label:Show()
+            else
+                button.label:Hide()
+            end
+        end
+
+        if cfg.raidMarkersOrientation == "VERTICAL" then
+            if index == 1 then
+                button:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+            else
+                button:SetPoint("TOPLEFT", buttons[index - 1], "BOTTOMLEFT", 0, -spacing)
+            end
+            totalWidth = math.max(totalWidth, buttonSize)
+            totalHeight = totalHeight + buttonSize + (index > 1 and spacing or 0)
+        else
+            if index == 1 then
+                button:SetPoint("LEFT", frame, "LEFT", 0, 0)
+            else
+                button:SetPoint("LEFT", buttons[index - 1], "RIGHT", spacing, 0)
+            end
+            totalWidth = totalWidth + buttonSize + (index > 1 and spacing or 0)
+            totalHeight = math.max(totalHeight, buttonSize)
+        end
+
+        if cfg.raidMarkersShowBackground then
+            button.bg:SetColorTexture(bgColor.r or 0, bgColor.g or 0, bgColor.b or 0, bgColor.a or 0.35)
+        else
+            button.bg:SetColorTexture(0, 0, 0, 0)
+        end
+    end
+
+    frame:SetSize(math.max(totalWidth, 1), math.max(totalHeight, 1))
+    frame:SetMovable(not cfg.raidMarkersLocked)
+
+    if cfg.raidMarkersShowBackground then
+        frame.bg:SetColorTexture(bgColor.r or 0, bgColor.g or 0, bgColor.b or 0,
+            math.min((bgColor.a or 0.35) * 0.55, 0.4))
+    else
+        frame.bg:SetColorTexture(0, 0, 0, 0)
+    end
+
+    if cfg.raidMarkersShowBorder then
+        SetSimpleOutlineColor(frame.border, borderColor.r or 0, borderColor.g or 0.6, borderColor.b or 1,
+            borderColor.a or 0.45)
+    else
+        SetSimpleOutlineColor(frame.border, 0, 0, 0, 0)
+    end
+end
+
+function Core:UpdateRaidMarkersVisibility()
+    if not self.raidMarkersFrame then return end
+    if MIcfg().raidMarkersEnabled then
+        self.raidMarkersFrame:Show()
+    else
+        self.raidMarkersFrame:Hide()
+    end
+end
+
 function Core:UpdateDelveQuickLeaveButton()
     if not self.delveQuickLeaveButton then return end
     local cfg = MIcfg()
@@ -1577,6 +2107,13 @@ function Core:ApplyMiscSettings()
         self.questToolsFrame:EnableMouse(true)
         self:UpdateQuestToolsLayout()
         self:UpdateQuestToolsVisibility()
+    end
+
+    if self.raidMarkersFrame then
+        self.raidMarkersFrame:SetMovable(not cfg.raidMarkersLocked)
+        self.raidMarkersFrame:EnableMouse(true)
+        self:UpdateRaidMarkersLayout()
+        self:UpdateRaidMarkersVisibility()
     end
 
     if self.levelingTipFrame then
@@ -1744,6 +2281,7 @@ function Core:CreateMiscBar()
 
     self.miscFrame = frame
     self:CreateQuestToolsFrame()
+    self:CreateRaidMarkersFrame()
     self:CreateLevelingTipFrame()
     self:CreateDelveQuickLeaveButton()
 
@@ -1894,6 +2432,138 @@ function Core:CreateQuestToolsFrame()
     self.questToolsFrame = frame
     self:UpdateQuestToolsLayout()
     self:UpdateQuestToolsVisibility()
+end
+
+function Core:CreateRaidMarkersFrame()
+    if self.raidMarkersFrame then return end
+
+    local cfg = MIcfg()
+    local frame = CreateFrame("Frame", addonName .. "RaidMarkersFrame", UIParent)
+    frame:SetFrameStrata("MEDIUM")
+    frame:SetToplevel(true)
+    frame:SetClampedToScreen(true)
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+
+    frame.bg = frame:CreateTexture(nil, "BACKGROUND")
+    frame.bg:SetAllPoints(frame)
+
+    frame.border = CreateSimpleOutline(frame, "BORDER", RAID_MARKERS_BUTTON_BORDER)
+
+    local pos = cfg.raidMarkersPoint
+    frame:SetPoint(pos.point or "CENTER", UIParent, pos.relativePoint or "CENTER", pos.x or 0, pos.y or -30)
+
+    frame:SetScript("OnDragStart", function(self)
+        if MIcfg().raidMarkersLocked then return end
+        self:StartMoving()
+    end)
+
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        Core:SaveRaidMarkersPosition()
+    end)
+
+    local function CreateMarkerButton(parent)
+        local button = CreateFrame("Button", nil, parent, "SecureActionButtonTemplate")
+        button:RegisterForClicks("AnyDown", "AnyUp")
+        button:RegisterForDrag("LeftButton")
+        button:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+        button:SetScale(1)
+        button._hoverScale = 1
+        button._hoverTargetScale = 1
+
+        button.bg = button:CreateTexture(nil, "BACKGROUND")
+        button.bg:SetAllPoints(button)
+
+        button.icon = button:CreateTexture(nil, "ARTWORK")
+        button.icon:SetPoint("CENTER")
+
+        button.label = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        button.label:SetPoint("CENTER")
+
+        button:SetScript("OnDragStart", function()
+            if MIcfg().raidMarkersLocked then return end
+            parent:StartMoving()
+        end)
+
+        button:SetScript("OnDragStop", function()
+            if MIcfg().raidMarkersLocked then return end
+            parent:StopMovingOrSizing()
+            Core:SaveRaidMarkersPosition()
+        end)
+
+        button:HookScript("OnEnter", function(self)
+            SetRaidMarkerButtonHoverTarget(self, 1.12)
+        end)
+
+        button:HookScript("OnLeave", function(self)
+            SetRaidMarkerButtonHoverTarget(self, 1)
+        end)
+
+        return button
+    end
+
+    frame.buttons = {}
+
+    for _, info in ipairs(RAID_TARGET_BUTTONS) do
+        local button = CreateMarkerButton(frame)
+        button.buttonInfo = info
+        button.tooltipTitle = info.label
+        button.tooltipText = "给当前目标设置团队标记。"
+        button.iconTexture = info.texture
+        button.textValue = nil
+        button.icon:SetTexture(info.texture)
+        button.icon:Show()
+        button.label:Hide()
+
+        button:SetScript("OnEnter", function(self)
+            Core:SetTooltipAnchor(GameTooltip, self, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(self.tooltipTitle or "团队标记", 1, 0.82, 0)
+            GameTooltip:AddLine(self.tooltipText or "", 1, 1, 1)
+            GameTooltip:AddLine("左键设置，右键清除。", 0.75, 1, 0.75)
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        table.insert(frame.buttons, button)
+    end
+
+    for _, info in ipairs(RAID_ACTION_BUTTONS) do
+        local button = CreateMarkerButton(frame)
+        button.buttonInfo = info
+        button.textValue = info.label
+        button.iconTexture = info.texture
+        button.tooltipTitle = info.tooltipTitle
+        button.tooltipText = info.tooltipText
+        if info.texture then
+            button.icon:SetTexture(info.texture)
+            button.icon:Show()
+            button.label:Hide()
+        else
+            button.icon:SetTexture(nil)
+            button.icon:Hide()
+            button.label:Show()
+        end
+
+        button:SetScript("OnEnter", function(self)
+            Core:SetTooltipAnchor(GameTooltip, self, "ANCHOR_BOTTOM")
+            GameTooltip:AddLine(self.tooltipTitle or "团队功能", 1, 0.82, 0)
+            GameTooltip:AddLine(self.tooltipText or "", 1, 1, 1)
+            if info.key == "COUNTDOWN" then
+                GameTooltip:AddLine(string.format("当前秒数：%d 秒", math.max(3, math.min(15,
+                    tonumber(MIcfg().raidMarkersCountdown) or RAID_MARKERS_DEFAULT_COUNTDOWN))), 0.75, 1, 0.75)
+            elseif info.key == "CLEAR" then
+                GameTooltip:AddLine("右键团队标记按钮也能直接清除。", 0.75, 1, 0.75)
+            end
+            GameTooltip:Show()
+        end)
+        button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+        table.insert(frame.buttons, button)
+    end
+
+    self.raidMarkersFrame = frame
+    self:UpdateRaidMarkersLayout()
+    self:UpdateRaidMarkersVisibility()
 end
 
 function Core:CreateTimerWindow()

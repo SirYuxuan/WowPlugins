@@ -167,6 +167,9 @@ Core.DEFAULTS = {
             tooltipFollowCursor = false,
             infoBarEnabled = true,
             infoBarLocked = true,
+            delveQuickLeaveEnabled = false,
+            delveQuickLeaveLocked = true,
+            delveQuickLeaveIconSize = 40,
             font = "Friz Quadrata TT",
             fontSize = 13,
             barSpacing = 18,
@@ -175,6 +178,12 @@ Core.DEFAULTS = {
                 relativePoint = "CENTER",
                 x = 0,
                 y = -150,
+            },
+            delveQuickLeavePoint = {
+                point = "CENTER",
+                relativePoint = "CENTER",
+                x = 180,
+                y = -20,
             },
         },
         -- 图标收纳模块已移除，不再保留 iconCollector 配置

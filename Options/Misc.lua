@@ -136,6 +136,56 @@ function ns.BuildMiscOptions()
                     },
                 },
             },
+            delveQuickLeave = {
+                type = "group",
+                name = "地下堡快速离开",
+                order = 25,
+                inline = true,
+                args = {
+                    delveQuickLeaveEnabled = {
+                        type = "toggle",
+                        name = "开启快速离开",
+                        desc = "进入地下堡后显示快速离开图标，点击图标即可离开当前地下堡。",
+                        order = 1,
+                        get = function() return MI().delveQuickLeaveEnabled end,
+                        set = function(_, val)
+                            MI().delveQuickLeaveEnabled = val
+                            Core:ApplyMiscSettings()
+                        end,
+                    },
+                    delveQuickLeaveLocked = {
+                        type = "toggle",
+                        name = function() return MI().delveQuickLeaveLocked and "解锁框架" or "锁定框架" end,
+                        order = 2,
+                        disabled = function() return not MI().delveQuickLeaveEnabled end,
+                        get = function() return MI().delveQuickLeaveLocked end,
+                        set = function(_, val)
+                            MI().delveQuickLeaveLocked = val
+                            Core:ApplyMiscSettings()
+                        end,
+                    },
+                    delveQuickLeaveIconSize = {
+                        type = "range",
+                        name = "图标大小",
+                        order = 3,
+                        min = 24,
+                        max = 72,
+                        step = 1,
+                        disabled = function() return not MI().delveQuickLeaveEnabled end,
+                        get = function() return MI().delveQuickLeaveIconSize or 40 end,
+                        set = function(_, val)
+                            MI().delveQuickLeaveIconSize = val
+                            Core:ApplyMiscSettings()
+                        end,
+                    },
+                    delveQuickLeaveTips = {
+                        type = "description",
+                        name = "使用传送图标作为地下堡快速离开按钮，仅在地下堡内显示；解锁后可拖动调整位置。",
+                        order = 4,
+                        width = "full",
+                    },
+                },
+            },
             tooltip = {
                 type = "group",
                 name = "鼠标提示",

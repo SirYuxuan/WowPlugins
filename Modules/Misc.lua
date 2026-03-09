@@ -752,7 +752,7 @@ function Core:CreateMiscBar()
     if self.miscFrame then return end
 
     local frame = CreateFrame("Frame", addonName .. "MiscInfoBar", UIParent)
-    frame:SetFrameStrata("HIGH")
+    frame:SetFrameStrata("LOW")
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:EnableMouse(true)

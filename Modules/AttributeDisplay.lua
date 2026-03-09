@@ -23,6 +23,7 @@ function Core:CreateAttributeFrame()
     local frame = CreateFrame("Frame", "YuXuanAttributeFrame", UIParent, "BackdropTemplate")
     frame:SetSize(200, 250)
     frame:SetPoint("CENTER")
+    frame:SetFrameStrata("LOW")
     frame:SetBackdrop({
         bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
         edgeFile = "Interface\\ChatFrame\\ChatFrameBorder",

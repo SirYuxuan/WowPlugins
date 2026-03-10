@@ -1,8 +1,21 @@
+-- ============================================================
+-- Modules/Misc.lua
+-- 雨轩工具箱 · 杂项综合模块
+--
+-- 包含以下子功能（未来可进一步拆分）：
+--   · 专精/天赋信息条（InfoBar）
+--   · 任务助手（QuestTools）
+--   · 团队标记条（RaidMarkers）
+--   · 升级提示（LevelingTip）
+--   · 地下堡快速离开（DelveQuickLeave）
+--   · 收益计时器（Timer）
+--   · 系统调节（Tooltip/目标箭头/NPC时间）
+-- ============================================================
 local addonName, ns = ...
 local Core = ns.Core
 local LibSharedMedia = LibStub("LibSharedMedia-3.0")
-local band = bit and bit.band
-local rshift = bit and bit.rshift
+local band = bit and bit.band   -- 位运算：按位与（用于 NPC GUID 解析）
+local rshift = bit and bit.rshift  -- 位运算：右移（用于 NPC GUID 解析）
 
 local INFOBAR_PADDING_X = 10
 local INFOBAR_PADDING_Y = 8
@@ -436,16 +449,6 @@ local function FormatElapsedTime(seconds)
     return string.format("%02d:%02d", minutes, secs)
 end
 
-local function FormatClockTimeFromNow(seconds)
-    local eta = math.max(0, math.floor(tonumber(seconds) or 0))
-    if eta <= 0 then
-        return "--"
-    end
-    if time and date then
-        return date("%H:%M", time() + eta)
-    end
-    return FormatElapsedTime(eta)
-end
 
 local function GetPlayerMaxLevelSafe()
     if type(GetMaxPlayerLevel) == "function" then
@@ -716,12 +719,11 @@ function Core:CreateTargetArrowFrame()
     frame:SetIgnoreParentScale(true)
     frame:Hide()
 
-    frame.text = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-    frame.text:SetPoint("CENTER")
-    frame.text:SetText(TARGET_ARROW_SYMBOL)
-    frame.text:SetTextColor(1, 0.12, 0.12, 0.95)
-    frame.text:SetShadowOffset(1, -1)
-    frame.text:SetShadowColor(0, 0, 0, 1)
+    -- 使用 Arrow.tga 贴图作为箭头，支持颜色自定义
+    frame.arrow = frame:CreateTexture(nil, "OVERLAY")
+    frame.arrow:SetAllPoints(frame)
+    frame.arrow:SetTexture("Interface\\AddOns\\" .. addonName .. "\\Resource\\Texture\\Arrow")
+    frame.arrow:SetVertexColor(1, 0.12, 0.12, 0.95)
 
     frame:SetScript("OnUpdate", function(self, elapsed)
         self._animTime = (self._animTime or 0) + elapsed
@@ -816,9 +818,14 @@ function Core:ApplyTargetArrowSettings()
 
     local size = math.max(12, math.min(64, tonumber(cfg.targetArrowSize) or 28))
     local frame = self.targetArrowFrame
-    frame:SetSize(size + 12, size + 12)
-    frame.text:SetFont(STANDARD_TEXT_FONT, size, "OUTLINE")
-    frame.text:SetText(TARGET_ARROW_SYMBOL)
+    frame:SetSize(size, size)
+
+    -- 应用颜色配置到箭头贴图（默认红色）
+    if frame.arrow then
+        local color = cfg.targetArrowColor or { r = 1, g = 0.12, b = 0.12, a = 0.95 }
+        frame.arrow:SetVertexColor(color.r or 1, color.g or 0.12, color.b or 0.12, color.a or 0.95)
+    end
+
     self:UpdateTargetArrowVisibility()
 end
 
@@ -841,6 +848,9 @@ function Core:ApplySystemAdjustSettings()
     end
     if cfg.targetArrowSize == nil then
         cfg.targetArrowSize = 28
+    end
+    if cfg.targetArrowColor == nil then
+        cfg.targetArrowColor = { r = 1, g = 0.12, b = 0.12, a = 0.95 }
     end
     if cfg.targetArrowShowEnemy == nil then
         cfg.targetArrowShowEnemy = true

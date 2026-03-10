@@ -290,6 +290,21 @@ function ns.BuildSystemAdjustOptions()
                             Core:ApplySystemAdjustSettings()
                         end,
                     },
+                    targetArrowColor = {
+                        type = "color",
+                        name = "箭头颜色",
+                        order = 8,
+                        hasAlpha = true,
+                        disabled = function() return not SA().targetArrowEnabled end,
+                        get = function()
+                            local c = SA().targetArrowColor or { r = 1, g = 0.12, b = 0.12, a = 0.95 }
+                            return c.r, c.g, c.b, c.a
+                        end,
+                        set = function(_, r, g, b, a)
+                            SA().targetArrowColor = { r = r, g = g, b = b, a = a }
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
                     targetArrowDesc = {
                         type = "description",
                         name = "箭头会尽量锚定在当前目标姓名板上方，并持续上下浮动。不勾选任何类型时对所有目标显示。",

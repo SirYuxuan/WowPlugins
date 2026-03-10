@@ -299,6 +299,7 @@ Core.DEFAULTS = {
             showTooltipHealthBar = false,
             targetArrowEnabled = false,
             targetArrowSize = 28,
+            targetArrowColor = { r = 1, g = 0.12, b = 0.12, a = 0.95 },
             showNPCAliveTime = false,
             npcTimeShowCurrentTime = false,
             npcTimeShowLayer = false,

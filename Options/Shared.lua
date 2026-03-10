@@ -14,6 +14,10 @@ function S.DMcfg() return Core.db.profile.distanceMonitor end
 
 function S.MIcfg() return Core.db.profile.misc end
 
+function S.SAcfg() return Core.db.profile.systemAdjust end
+
+function S.IDcfg() return Core.db.profile.instanceDifficulty end
+
 function S.CBcfg() return Core.db.profile.castBar end
 
 function S.MGcfg() return Core.db.profile.mapGuide end

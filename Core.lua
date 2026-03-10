@@ -13,7 +13,7 @@ ns.addonName = addonName
 ns.VERSION = VERSION
 
 pcall(function()
-    LibSharedMedia:Register("statusbar", "Yuxuan", "Interface\\AddOns\\" .. addonName .. "\\Tga\\002")
+    LibSharedMedia:Register("statusbar", "Yuxuan", "Interface\\AddOns\\" .. addonName .. "\\Resource\\Texture\\Yuxuan")
 end)
 
 -- ─── Dragon Riding Spell IDs (for speed detection) ─
@@ -75,6 +75,10 @@ local Core = {
     timerSession = nil,
     levelingTipFrame = nil,
     levelingTipState = nil,
+    instanceDifficultyFrame = nil,
+    instanceDifficultyEventFrame = nil,
+    instanceDifficultyToast = nil,
+    instanceDifficultyTicker = nil,
 }
 
 -- Backward compat: Core.util points to ns.util (populated by Utils.lua)
@@ -228,6 +232,7 @@ Core.DEFAULTS = {
             levelingTipShowRemainingXP = true,
             levelingTipShowLevelETA = true,
             levelingTipShowMaxETA = true,
+            levelingTipHideAtMaxLevel = true,
             autoAnnounceQuest = false,
             autoQuestTurnIn = false,
             announceTemplate = "|cFF33FF99【雨轩工具箱】|r |cFFFFFF00{action}|r：{quest}",
@@ -286,6 +291,40 @@ Core.DEFAULTS = {
                 relativePoint = "CENTER",
                 x = 180,
                 y = -20,
+            },
+        },
+        systemAdjust = {
+            combatDamageTextScale = 3,
+            opaqueTooltipBackground = false,
+            showTooltipHealthBar = false,
+            showNPCAliveTime = false,
+            npcTimeShowCurrentTime = false,
+            npcTimeShowLayer = false,
+            npcTimeShowNPCID = false,
+            npcTimeUseModifier = false,
+            npcTimeShowPhaseAlert = false,
+        },
+        instanceDifficulty = {
+            enabled = true,
+            visible = true,
+            locked = false,
+            showOnLogin = true,
+            autoCollapseInInstance = true,
+            showCenterToast = true,
+            centerToastDuration = 3,
+            ttsEnabled = true,
+            ttsVolume = 100,
+            announceToChat = true,
+            showResetButton = true,
+            showTeleportButton = true,
+            showLeaveButton = true,
+            frameScale = 1,
+            fontSize = 13,
+            point = {
+                point = "CENTER",
+                relativePoint = "CENTER",
+                x = 280,
+                y = 0,
             },
         },
         -- 图标收纳模块已移除，不再保留 iconCollector 配置
@@ -625,6 +664,12 @@ function Core:ApplyAllSettings()
     if self.ApplyMiscSettings then
         self:ApplyMiscSettings()
     end
+    if self.ApplySystemAdjustSettings then
+        self:ApplySystemAdjustSettings()
+    end
+    if self.ApplyInstanceDifficultySettings then
+        self:ApplyInstanceDifficultySettings()
+    end
     if self.ApplyDistanceMonitorSettings then
         self:ApplyDistanceMonitorSettings()
     end
@@ -652,6 +697,7 @@ function Core:RegisterSlashCommands()
     SLASH_YuXuanToolbox1 = "/yx"
     SlashCmdList["YuXuanToolbox"] = function(msg)
         msg = strtrim(strlower(msg or ""))
+        local command, rest = msg:match("^(%S+)%s*(.-)$")
         if msg == "lock" then
             self.db.profile.castBar.locked = true
             if self.ApplyCastBarSettings then self:ApplyCastBarSettings() end
@@ -660,9 +706,33 @@ function Core:RegisterSlashCommands()
             self.db.profile.castBar.locked = false
             if self.ApplyCastBarSettings then self:ApplyCastBarSettings() end
             print("|cFF33FF99雨轩工具箱|r丨施法条已解锁，拖动以移动位置")
+        elseif command == "diff" then
+            local sub = strtrim(rest or "")
+            if sub == "lock" then
+                self.db.profile.instanceDifficulty.locked = true
+                if self.ApplyInstanceDifficultySettings then self:ApplyInstanceDifficultySettings() end
+                print("|cFF33FF99雨轩工具箱|r丨副本难度助手已锁定")
+            elseif sub == "unlock" then
+                self.db.profile.instanceDifficulty.locked = false
+                if self.ApplyInstanceDifficultySettings then self:ApplyInstanceDifficultySettings() end
+                print("|cFF33FF99雨轩工具箱|r丨副本难度助手已解锁")
+            elseif sub == "reset" then
+                if self.ResetCurrentInstances then self:ResetCurrentInstances() end
+            elseif sub == "leave" then
+                if self.QuickLeaveInstance then self:QuickLeaveInstance() end
+            else
+                if self.ToggleInstanceDifficultyFrame then self:ToggleInstanceDifficultyFrame() end
+            end
         else
             local AceConfigDialog = LibStub("AceConfigDialog-3.0")
             AceConfigDialog:Open(addonName)
+        end
+    end
+
+    SLASH_YuXuanToolboxDifficulty1 = "/c"
+    SlashCmdList["YuXuanToolboxDifficulty"] = function()
+        if self.ToggleInstanceDifficultyFrame then
+            self:ToggleInstanceDifficultyFrame()
         end
     end
 
@@ -701,6 +771,9 @@ function Core:Initialize()
     self:CreateAttributeFrame()
     self:CreateCurrencyFrame()
     self:CreateCastBars()
+    if self.CreateInstanceDifficultyFrame then
+        self:CreateInstanceDifficultyFrame()
+    end
     self:InitializeMapGuide()
     -- 图标收纳模块已移除，这里不再执行其初始化
     self:SetupMinimapButton()

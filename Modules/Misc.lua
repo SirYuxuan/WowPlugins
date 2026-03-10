@@ -1,6 +1,8 @@
 local addonName, ns = ...
 local Core = ns.Core
 local LibSharedMedia = LibStub("LibSharedMedia-3.0")
+local band = bit and bit.band
+local rshift = bit and bit.rshift
 
 local INFOBAR_PADDING_X = 10
 local INFOBAR_PADDING_Y = 8
@@ -86,6 +88,9 @@ local function MIcfg()
     end
     if cfg.questToolsSpacing == nil then
         cfg.questToolsSpacing = INFOBAR_SPACING
+    end
+    if cfg.levelingTipHideAtMaxLevel == nil then
+        cfg.levelingTipHideAtMaxLevel = true
     end
     if cfg.infoBarOrientation ~= "VERTICAL" then
         cfg.infoBarOrientation = "HORIZONTAL"
@@ -504,6 +509,10 @@ end
 -- ═══════════════════════════════════════════════════
 local globalTooltipHooked = false
 local tooltipVisibilityHooked = false
+local tooltipNPCAliveHooked = false
+local tooltipHealthBarHooked = false
+local npcPhaseAlertReady = false
+local NPC_TIME_FORMAT = "%H:%M, %d.%m"
 local TOOLTIP_FRAME_NAMES = {
     "GameTooltip",
     "ItemRefTooltip",
@@ -515,6 +524,227 @@ local TOOLTIP_FRAME_NAMES = {
     "WorldMapTooltip",
     "FriendsTooltip",
 }
+
+local function SAcfg()
+    return Core.db.profile.systemAdjust
+end
+
+local npcTimeFormatter = CreateFromMixins(SecondsFormatterMixin)
+npcTimeFormatter:Init(1, SecondsFormatter.Abbreviation.Truncate)
+
+local function AddColoredDoubleLine(tooltip, leftText, rightText, leftColor, rightColor, wrap)
+    leftColor = leftColor or NORMAL_FONT_COLOR
+    rightColor = rightColor or HIGHLIGHT_FONT_COLOR
+    if wrap == nil then
+        wrap = true
+    end
+    tooltip:AddDoubleLine(
+        leftText,
+        rightText,
+        leftColor.r or 1,
+        leftColor.g or 1,
+        leftColor.b or 1,
+        rightColor.r or 1,
+        rightColor.g or 1,
+        rightColor.b or 1,
+        wrap
+    )
+end
+
+local function PrintPhaseAlert()
+    local chatFrame = _G["DEFAULT_CHAT_FRAME"]
+    if chatFrame and chatFrame.AddMessage then
+        chatFrame:AddMessage(string.format("|cff9BFFA8 # %s New Connection|r", date("%H:%M")))
+    end
+end
+
+local function DecodeNPCSpawnInfo(guid)
+    if type(guid) ~= "string" or not band or not rshift then
+        return nil
+    end
+
+    local unitType, _, serverID, _, layerUID, unitID = strsplit("-", guid)
+    if unitType ~= "Creature" and unitType ~= "Vehicle" then
+        return nil
+    end
+
+    local rawTime = tonumber(strsub(guid, -6), 16)
+    local indexValue = tonumber(strsub(guid, -10, -6), 16)
+    if not rawTime or not indexValue then
+        return nil
+    end
+
+    local serverTime = GetServerTime()
+    local spawnTime = (serverTime - (serverTime % 2 ^ 23)) + band(rawTime, 0x7fffff)
+    if spawnTime > serverTime then
+        spawnTime = spawnTime - ((2 ^ 23) - 1)
+    end
+
+    local spawnIndex = rshift(band(indexValue, 0xffff8), 3)
+
+    return {
+        serverID = serverID,
+        layerUID = layerUID,
+        unitID = unitID,
+        spawnIndex = spawnIndex,
+        spawnTime = spawnTime,
+        serverTime = serverTime,
+        aliveSeconds = math.max(0, serverTime - spawnTime),
+    }
+end
+
+function Core:AppendNPCAliveTimeToTooltip(tooltip)
+    local cfg = self.db and self.db.profile and self.db.profile.systemAdjust
+    if not cfg or not cfg.showNPCAliveTime then return end
+    if not tooltip or type(tooltip.GetUnit) ~= "function" then return end
+    if cfg.npcTimeUseModifier and not IsModifierKeyDown() then return end
+
+    local _, unit = tooltip:GetUnit()
+    if not unit or not UnitExists(unit) or UnitIsPlayer(unit) or UnitIsDead(unit) then
+        return
+    end
+
+    local guid = UnitGUID(unit)
+    local info = DecodeNPCSpawnInfo(guid)
+    if not info then return end
+
+    if cfg.npcTimeShowCurrentTime then
+        AddColoredDoubleLine(tooltip, "当前时间", date(NPC_TIME_FORMAT, info.serverTime))
+    end
+
+    AddColoredDoubleLine(
+        tooltip,
+        "NPC存活时间",
+        npcTimeFormatter:Format(info.aliveSeconds, false) .. " (" .. date(NPC_TIME_FORMAT, info.spawnTime) .. ")"
+    )
+
+    if cfg.npcTimeShowLayer and info.serverID and info.layerUID then
+        AddColoredDoubleLine(tooltip, "位面层", tostring(info.serverID) .. "-" .. tostring(info.layerUID))
+    end
+
+    if cfg.npcTimeShowNPCID and info.unitID then
+        AddColoredDoubleLine(tooltip, "NPC ID", tostring(info.unitID))
+        if info.spawnIndex and info.spawnIndex > 0 then
+            AddColoredDoubleLine(tooltip, "Index", tostring(info.spawnIndex))
+        end
+    end
+
+    tooltip:Show()
+end
+
+function Core:ApplyNPCTooltipHook()
+    if tooltipNPCAliveHooked then return end
+    tooltipNPCAliveHooked = true
+    local tooltipDataProcessor = _G["TooltipDataProcessor"]
+
+    local function HookTooltipUnit(tooltip)
+        Core:AppendNPCAliveTimeToTooltip(tooltip)
+    end
+
+    if tooltipDataProcessor and Enum and Enum.TooltipDataType and tooltipDataProcessor.AddTooltipPostCall then
+        tooltipDataProcessor.AddTooltipPostCall(Enum.TooltipDataType.Unit, HookTooltipUnit)
+        return
+    end
+
+    for _, frameName in ipairs(TOOLTIP_FRAME_NAMES) do
+        local tooltip = _G[frameName]
+        if tooltip and tooltip.HookScript and tooltip.HasScript and tooltip:HasScript("OnTooltipSetUnit") then
+            tooltip:HookScript("OnTooltipSetUnit", HookTooltipUnit)
+        end
+    end
+end
+
+local function EnsureOpaqueTooltipBackground(frame)
+    if not frame or frame.YuXuanOpaqueBackground then return end
+
+    local bg = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+    bg:SetAllPoints(frame)
+    bg:SetColorTexture(0, 0, 0, 1)
+    bg:Hide()
+
+    frame.YuXuanOpaqueBackground = bg
+end
+
+function Core:ApplyTooltipBackgroundOpacity()
+    local cfg = self.db and self.db.profile and self.db.profile.systemAdjust
+    local enabled = cfg and cfg.opaqueTooltipBackground
+
+    for _, frameName in ipairs(TOOLTIP_FRAME_NAMES) do
+        local tooltip = _G[frameName]
+        if tooltip then
+            EnsureOpaqueTooltipBackground(tooltip)
+            if tooltip.YuXuanOpaqueBackground then
+                tooltip.YuXuanOpaqueBackground:SetShown(enabled)
+            end
+        end
+    end
+end
+
+function Core:ApplyTooltipHealthBarVisibility()
+    local cfg = self.db and self.db.profile and self.db.profile.systemAdjust
+    local showHealthBar = cfg and cfg.showTooltipHealthBar
+    local statusBar = _G["GameTooltipStatusBar"]
+    if not statusBar then return end
+
+    if not tooltipHealthBarHooked and statusBar.HookScript then
+        tooltipHealthBarHooked = true
+        statusBar:HookScript("OnShow", function(bar)
+            local currentCfg = Core.db and Core.db.profile and Core.db.profile.systemAdjust
+            if currentCfg and not currentCfg.showTooltipHealthBar then
+                bar:Hide()
+            end
+        end)
+    end
+
+    if showHealthBar then
+        statusBar:Show()
+    else
+        statusBar:Hide()
+    end
+end
+
+function Core:ApplySystemAdjustSettings()
+    local cfg = SAcfg()
+
+    if cfg.combatDamageTextScale == nil then
+        cfg.combatDamageTextScale = 3
+    end
+    cfg.combatDamageTextScale = math.max(1, math.min(20, tonumber(cfg.combatDamageTextScale) or 3))
+
+    if cfg.opaqueTooltipBackground == nil then
+        cfg.opaqueTooltipBackground = false
+    end
+    if cfg.showTooltipHealthBar == nil then
+        cfg.showTooltipHealthBar = false
+    end
+    if cfg.showNPCAliveTime == nil then
+        cfg.showNPCAliveTime = false
+    end
+    if cfg.npcTimeShowCurrentTime == nil then
+        cfg.npcTimeShowCurrentTime = false
+    end
+    if cfg.npcTimeShowLayer == nil then
+        cfg.npcTimeShowLayer = false
+    end
+    if cfg.npcTimeShowNPCID == nil then
+        cfg.npcTimeShowNPCID = false
+    end
+    if cfg.npcTimeUseModifier == nil then
+        cfg.npcTimeUseModifier = false
+    end
+    if cfg.npcTimeShowPhaseAlert == nil then
+        cfg.npcTimeShowPhaseAlert = false
+    end
+
+    if SetCVar then
+        SetCVar("floatingCombatTextCombatDamageDirectionalScale_V2", tostring(cfg.combatDamageTextScale))
+    end
+
+    self:ApplyTooltipBackgroundOpacity()
+    self:ApplyTooltipHealthBarVisibility()
+    self:ApplyNPCTooltipHook()
+    self:UpdateMiscEventRegistration()
+end
 
 function Core:ApplyGlobalTooltipHook()
     if globalTooltipHooked then return end
@@ -746,6 +976,7 @@ function Core:UpdateMiscEventRegistration()
     self.miscEventFrame:UnregisterAllEvents()
 
     local cfg = MIcfg()
+    local systemCfg = Core.db and Core.db.profile and Core.db.profile.systemAdjust
     if cfg.questToolsEnabled and cfg.autoAnnounceQuest then
         self.miscEventFrame:RegisterEvent("QUEST_ACCEPTED")
         self.miscEventFrame:RegisterEvent("QUEST_TURNED_IN")
@@ -773,6 +1004,10 @@ function Core:UpdateMiscEventRegistration()
     if cfg.levelingTipEnabled then
         self.miscEventFrame:RegisterEvent("PLAYER_XP_UPDATE")
         self.miscEventFrame:RegisterEvent("PLAYER_LEVEL_UP")
+    end
+
+    if systemCfg and systemCfg.npcTimeShowPhaseAlert then
+        self.miscEventFrame:RegisterEvent("CONSOLE_MESSAGE")
     end
 end
 
@@ -1720,7 +1955,14 @@ end
 
 function Core:UpdateLevelingTipVisibility()
     if not self.levelingTipFrame then return end
-    if MIcfg().levelingTipEnabled then
+    local cfg = MIcfg()
+    local currentLevel = UnitLevel and UnitLevel("player") or 0
+    local maxLevel = GetPlayerMaxLevelSafe()
+    if cfg.levelingTipHideAtMaxLevel == nil then
+        cfg.levelingTipHideAtMaxLevel = true
+    end
+
+    if cfg.levelingTipEnabled and not (cfg.levelingTipHideAtMaxLevel and currentLevel >= maxLevel) then
         self.levelingTipFrame:Show()
     else
         self.levelingTipFrame:Hide()
@@ -2131,6 +2373,7 @@ function Core:ApplyMiscSettings()
     self:UpdateMiscEventRegistration()
     self:ApplyGlobalTooltipHook()
     self:UpdateTooltipVisibility()
+    self:ApplySystemAdjustSettings()
 end
 
 -- ═══════════════════════════════════════════════════
@@ -2304,11 +2547,21 @@ function Core:CreateMiscBar()
             return
         end
 
+        if event == "CONSOLE_MESSAGE" then
+            local message = ...
+            local cfg = Core.db and Core.db.profile and Core.db.profile.systemAdjust
+            if cfg and cfg.npcTimeShowPhaseAlert and npcPhaseAlertReady and type(message) == "string" and string.find(string.lower(message), "new connection", 1, true) then
+                PrintPhaseAlert()
+            end
+            return
+        end
+
         if event == "PLAYER_XP_UPDATE" then
             local unit = ...
             if unit == "player" then
                 Core:UpdateLevelingTipTracking()
                 Core:RefreshLevelingTipFrame()
+                Core:UpdateLevelingTipVisibility()
             end
             return
         end
@@ -2316,11 +2569,20 @@ function Core:CreateMiscBar()
         if event == "PLAYER_LEVEL_UP" then
             Core:UpdateLevelingTipTracking()
             Core:RefreshLevelingTipFrame()
+            Core:UpdateLevelingTipVisibility()
             return
         end
 
         Core:HandleMiscQuestEvent(event, ...)
     end)
+
+    if C_Timer and C_Timer.After then
+        C_Timer.After(1, function()
+            npcPhaseAlertReady = true
+        end)
+    else
+        npcPhaseAlertReady = true
+    end
 
     -- ── 闪烁定时器 ──
     frame:SetScript("OnUpdate", function(_, dt)

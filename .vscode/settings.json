@@ -64,7 +64,13 @@
         "LE_PARTY_CATEGORY_INSTANCE",
         "UIDropDownMenu_AddButton",
         "UIDropDownMenu_CreateInfo",
-        "ConfirmOrLeaveParty"
+        "ConfirmOrLeaveParty",
+        "SetRaidTargetIcon",
+        "LE_PARTY_CATEGORY_HOME",
+        "TooltipDataProcessor",
+        "SecondsFormatterMixin",
+        "SecondsFormatter"
     ],
+    "Lua.type.weakUnionCheck": true,
   
 }

@@ -106,6 +106,22 @@ function ns.BuildLevelingTipOptions()
                     Core:ApplyMiscSettings()
                 end,
             },
+            hideAtMaxLevel = {
+                type = "toggle",
+                name = "满级自动隐藏",
+                order = 14,
+                disabled = function() return not MI().levelingTipEnabled end,
+                get = function()
+                    if MI().levelingTipHideAtMaxLevel == nil then
+                        return true
+                    end
+                    return MI().levelingTipHideAtMaxLevel
+                end,
+                set = function(_, val)
+                    MI().levelingTipHideAtMaxLevel = val
+                    Core:ApplyMiscSettings()
+                end,
+            },
             tips = {
                 type = "description",
                 name = "升级提示会根据当前经验获取速度，动态显示升级效率、距离下一级以及预计升级时间。",

@@ -1169,7 +1169,11 @@ function Core:CreateTargetArrowFrame()
 
     frame.arrow:SetTexture("Interface\\AddOns\\" .. addonName .. "\\Resource\\Texture\\Arrow")
 
-    frame.arrow:SetVertexColor(1, 0.12, 0.12, 0.95)
+    if frame.arrow.SetRotation then
+        frame.arrow:SetRotation(math.pi)
+    end
+
+    frame.arrow:SetVertexColor(0.12, 1, 0.32, 0.95)
 
 
 
@@ -1326,12 +1330,16 @@ function Core:ApplyTargetArrowSettings()
 
 
 
-    -- 应用颜色配置到箭头贴图（默认红色）
+    -- 应用颜色配置到箭头贴图（默认绿色）
 
     if frame.arrow then
-        local color = cfg.targetArrowColor or { r = 1, g = 0.12, b = 0.12, a = 0.95 }
+        local color = cfg.targetArrowColor or { r = 0.12, g = 1, b = 0.32, a = 0.95 }
 
-        frame.arrow:SetVertexColor(color.r or 1, color.g or 0.12, color.b or 0.12, color.a or 0.95)
+        if frame.arrow.SetRotation then
+            frame.arrow:SetRotation(math.pi)
+        end
+
+        frame.arrow:SetVertexColor(color.r or 0.12, color.g or 1, color.b or 0.32, color.a or 0.95)
     end
 
 
@@ -1369,7 +1377,7 @@ function Core:ApplySystemAdjustSettings()
     end
 
     if cfg.targetArrowColor == nil then
-        cfg.targetArrowColor = { r = 1, g = 0.12, b = 0.12, a = 0.95 }
+        cfg.targetArrowColor = { r = 0.12, g = 1, b = 0.32, a = 0.95 }
     end
 
     if cfg.targetArrowShowEnemy == nil then
@@ -3545,7 +3553,7 @@ function Core:UpdateQuestToolsLayout()
 
     local frame = self.questToolsFrame
 
-    local spacing = math.max(1, math.min(300, tonumber(c0fg.questToolsSpacing) or INFOBAR_SPACING))
+    local spacing = math.max(1, math.min(300, tonumber(cfg.questToolsSpacing) or INFOBAR_SPACING))
 
     local fontPath = LibSharedMedia:Fetch("font", cfg.questToolsFont) or STANDARD_TEXT_FONT
 

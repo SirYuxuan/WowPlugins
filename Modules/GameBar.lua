@@ -72,6 +72,34 @@ local function GetGameBarAnimationDuration()
     return math.max(0, tonumber(GB().animationDuration) or 0.2)
 end
 
+local function IsActionButtonUseKeyDown()
+    if C_FVar and C_FVar.GetCVarBool then
+        return C_FVar.GetCVarBool("ActionButtonUseKeyDown")
+    end
+
+    local getCVarBool = rawget(_G, "GetCVarBool")
+    if getCVarBool then
+        return getCVarBool("ActionButtonUseKeyDown")
+    end
+
+    local getCVar = rawget(_G, "GetCVar")
+    if getCVar then
+        local value = getCVar("ActionButtonUseKeyDown")
+        return value == "1" or value == 1 or value == true
+    end
+
+    return false
+end
+
+local function RegisterButtonClicks(button)
+    if not button or not button.RegisterForClicks then return end
+    if IsActionButtonUseKeyDown() then
+        button:RegisterForClicks("AnyDown")
+    else
+        button:RegisterForClicks("AnyUp")
+    end
+end
+
 local function Lerp(a, b, t)
     return a + (b - a) * t
 end
@@ -250,6 +278,35 @@ local function ShowFriendsTooltip(btn)
     GameTooltip:Show()
 end
 
+local function OpenFriendsList()
+    if ToggleFriendsFrame then
+        if FRIENDS_TAB then
+            ToggleFriendsFrame(FRIENDS_TAB)
+        else
+            ToggleFriendsFrame()
+        end
+        if FriendsFrame_ShowSubFrame then
+            FriendsFrame_ShowSubFrame("FriendsListFrame")
+        end
+        return true
+    end
+
+    local toggleFriendsPanel = rawget(_G, "ToggleFriendsPanel")
+    if toggleFriendsPanel then
+        toggleFriendsPanel()
+        return true
+    end
+
+    if ClickNamedFrame("FriendsMicroButton") then
+        if FriendsFrame_ShowSubFrame then
+            FriendsFrame_ShowSubFrame("FriendsListFrame")
+        end
+        return true
+    end
+
+    return false
+end
+
 local function ShowGuildTooltip(btn)
     GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM", 0, -8)
     GameTooltip:ClearLines()
@@ -405,12 +462,7 @@ end
 
 local function BuildHearthstoneMacroForSide(button, side)
     local action = ResolveConfiguredHearthstoneAction(button, side)
-    local macro = BuildHearthstoneMacroForAction(action)
-    local hs = GetHearthstoneSettings()
-    if hs[side] == "RANDOM" then
-        macro = macro .. "\n/run _G." .. addonName .. "_UpdateHearthstoneButtons()"
-    end
-    return macro
+    return BuildHearthstoneMacroForAction(action)
 end
 
 local function GetDefaultHearthstoneAction()
@@ -696,7 +748,11 @@ local function ApplyButtonHoverVisual(btn, hovered)
         end
     end
     if btn.badge then
-        btn.badge:SetTextColor(hovered and r or 1, hovered and g or 0.9, hovered and b or 0.1, 1)
+        local defaultR, defaultG, defaultB = 1, 0.9, 0.1
+        if btn._defID == "FRIENDS" then
+            defaultR, defaultG, defaultB = GetPlayerClassColor()
+        end
+        btn.badge:SetTextColor(hovered and r or defaultR, hovered and g or defaultG, hovered and b or defaultB, 1)
     end
 end
 
@@ -822,7 +878,10 @@ local BUTTON_DEFS = {
         id = "FRIENDS",
         label = "好友",
         icon = ICONS.Friends,
-        macro = { LeftButton = "/friends" },
+        click = {
+            LeftButton = OpenFriendsList,
+            RightButton = OpenFriendsList,
+        },
         additionalText = function()
             local totalBN, wowBN = GetBattleNetOnlineCounts()
             local wowFriends = C_FriendList and C_FriendList.GetNumOnlineFriends and C_FriendList.GetNumOnlineFriends() or
@@ -1114,6 +1173,7 @@ local rightButtons       = {}
 local timeTicker
 local infoTicker
 local hearthstoneButtons = {}
+local UpdateHearthstoneButtonMacros
 
 local function GetDef(id) return BUTTON_DEFS[id] or BUTTON_DEFS["NONE"] end
 
@@ -1178,7 +1238,7 @@ local function FormatResetTime(seconds)
     return string.format("%d分钟", minutes)
 end
 
-local function UpdateHearthstoneButtonMacros(button)
+UpdateHearthstoneButtonMacros = function(button)
     if not button then return end
     button:SetAttribute("type*", "macro")
     button:SetAttribute("type1", "macro")
@@ -1237,7 +1297,7 @@ end
 local function CreateBarButton(parent, index, side)
     local btnName = addonName .. "GameBar_" .. side .. index
     local btn = CreateFrame("Button", btnName, parent, "SecureActionButtonTemplate")
-    btn:RegisterForClicks("AnyUp")
+    RegisterButtonClicks(btn)
     btn:RegisterForDrag("LeftButton")
 
     local icon = btn:CreateTexture(nil, "ARTWORK")
@@ -1284,28 +1344,8 @@ local function CreateBarButton(parent, index, side)
     btn._badgeTicker   = nil
     btn._iconColorAnim = { currentR = 1, currentG = 1, currentB = 1 }
 
-    btn:SetScript("PreClick", function(self, mouseButton)
-        if self._defID == "HEARTHSTONE" then
-            print("|cFF00FF00[YuXuan Debug]|r 炉石按钮被点击")
-            print("  鼠标按钮: " .. tostring(mouseButton))
-            print("  type*: " .. tostring(self:GetAttribute("type*")))
-            print("  type1: " .. tostring(self:GetAttribute("type1")))
-            print("  type2: " .. tostring(self:GetAttribute("type2")))
-            print("  type3: " .. tostring(self:GetAttribute("type3")))
-            print("  macrotext1: " .. tostring(self:GetAttribute("macrotext1")))
-            print("  macrotext2: " .. tostring(self:GetAttribute("macrotext2")))
-            print("  macrotext3: " .. tostring(self:GetAttribute("macrotext3")))
-            print("  InCombatLockdown: " .. tostring(InCombatLockdown()))
-            print("  _defID: " .. tostring(self._defID))
-            print("  _isHearthstoneButton: " .. tostring(self._isHearthstoneButton))
-            print("  ButtonName: " .. tostring(self:GetName()))
-        end
-    end)
     btn:SetScript("PostClick", function(self, mouseButton)
         local def = GetDef(self._defID)
-        if self._defID == "HEARTHSTONE" then
-            print("|cFF00FF00[YuXuan Debug]|r PostClick 触发 (" .. tostring(mouseButton) .. ")")
-        end
         if def.click then
             local fn = def.click[mouseButton] or def.click.LeftButton
             if fn then
@@ -1314,6 +1354,13 @@ local function CreateBarButton(parent, index, side)
                     pcall(fn)
                 end
             end
+        end
+        if self._defID == "HEARTHSTONE" and self._isHearthstoneButton and not InCombatLockdown() then
+            C_Timer.After(0, function()
+                if self and self._isHearthstoneButton then
+                    UpdateHearthstoneButtonMacros(self)
+                end
+            end)
         end
     end)
     btn:SetScript("OnEnter", function(self)
@@ -1350,6 +1397,15 @@ local function RefreshButton(btn, defID, size)
     btn._defID = defID or "NONE"
     local def  = GetDef(btn._defID)
     btn:SetSize(size, size)
+    RegisterButtonClicks(btn)
+    local badgeFontSize = math.max(10, math.floor((tonumber(size) or 28) * 0.42))
+    btn.badge:SetFont(STANDARD_TEXT_FONT, badgeFontSize, "OUTLINE")
+    if btn._defID == "FRIENDS" then
+        local r, g, b = GetPlayerClassColor()
+        btn.badge:SetTextColor(r, g, b, 1)
+    else
+        btn.badge:SetTextColor(1, 0.9, 0.1, 1)
+    end
 
     -- 清除旧的 macro 属性
     if btn.ClearAttributes then
@@ -1396,11 +1452,6 @@ local function RefreshButton(btn, defID, size)
             btn._isHearthstoneButton = true
             UpdateHearthstoneButtonMacros(btn)
             table.insert(hearthstoneButtons, btn)
-            print("|cFF00FF00[YuXuan Debug]|r RefreshButton 设置炉石宏:")
-            print("  macrotext1: " .. tostring(btn:GetAttribute("macrotext1")))
-            print("  macrotext2: " .. tostring(btn:GetAttribute("macrotext2")))
-            print("  macrotext3: " .. tostring(btn:GetAttribute("macrotext3")))
-            print("  type*: " .. tostring(btn:GetAttribute("type*")))
         end
     end
 
@@ -1425,7 +1476,7 @@ end
 -- ── 创建中间时间面板 ──────────────────────────────
 local function CreateMiddlePanel(parent)
     local panel = CreateFrame("Button", addonName .. "GameBarMiddle", parent, "SecureActionButtonTemplate")
-    panel:RegisterForClicks("AnyUp")
+    RegisterButtonClicks(panel)
     panel:RegisterForDrag("LeftButton")
 
     local bg = panel:CreateTexture(nil, "BACKGROUND")

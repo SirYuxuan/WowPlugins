@@ -200,6 +200,47 @@ Core.DEFAULTS = {
                 y = -20,
             },
         },
+        gameBar = {
+            enabled           = false,
+            locked            = true,
+            buttonSize        = 28,
+            spacing           = 4,
+            middleWidth       = 80,
+            timeFontSize      = 20,
+            animationDuration = 0.2,
+            showBackground    = true,
+            backgroundColor   = { r = 0, g = 0, b = 0, a = 0.45 },
+            mouseOver         = false,
+            point             = "TOP",
+            relativePoint     = "TOP",
+            x                 = 0,
+            y                 = -20,
+            leftButtons       = { "CHARACTER", "TALENTS", "SPELLBOOK", "QUESTLOG" },
+            rightButtons      = { "BAGS", "FRIENDS", "GUILD", "SETTINGS" },
+            hearthstone       = {
+                showBindLocation = true,
+                left = "AUTO",
+                middle = "RANDOM",
+                right = "AUTO",
+            },
+        },
+        performanceMonitor = {
+            enabled = true,
+            locked = true,
+            font = "Friz Quadrata TT",
+            fontSize = 14,
+            updateInterval = 1,
+            showBackground = true,
+            showBorder = true,
+            backgroundColor = { r = 0, g = 0, b = 0, a = 0.32 },
+            borderColor = { r = 0, g = 0.6, b = 1, a = 0.45 },
+            point = {
+                point = "CENTER",
+                relativePoint = "CENTER",
+                x = 220,
+                y = -20,
+            },
+        },
         misc = {
             questToolsEnabled = false,
             questToolsLocked = true,
@@ -670,11 +711,17 @@ function Core:ApplyAllSettings()
     if self.ApplySystemAdjustSettings then
         self:ApplySystemAdjustSettings()
     end
+    if self.ApplyGameBarSettings then
+        self:ApplyGameBarSettings()
+    end
     if self.ApplyInstanceDifficultySettings then
         self:ApplyInstanceDifficultySettings()
     end
     if self.ApplyDistanceMonitorSettings then
         self:ApplyDistanceMonitorSettings()
+    end
+    if self.ApplyPerformanceMonitorSettings then
+        self:ApplyPerformanceMonitorSettings()
     end
     if self.ApplyAttributeSettings then
         self:ApplyAttributeSettings()
@@ -771,6 +818,9 @@ function Core:Initialize()
     self:CreateQuickChatBar()
     self:CreateMiscBar()
     self:CreateDistanceMonitorFrame()
+    if self.CreatePerformanceMonitorFrame then
+        self:CreatePerformanceMonitorFrame()
+    end
     self:CreateAttributeFrame()
     self:CreateCurrencyFrame()
     self:CreateCastBars()

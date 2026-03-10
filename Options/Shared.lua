@@ -12,6 +12,8 @@ function S.CUcfg() return Core.db.profile.currency end
 
 function S.DMcfg() return Core.db.profile.distanceMonitor end
 
+function S.PMcfg() return Core.db.profile.performanceMonitor end
+
 function S.MIcfg() return Core.db.profile.misc end
 
 function S.SAcfg() return Core.db.profile.systemAdjust end

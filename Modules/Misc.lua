@@ -738,6 +738,41 @@ function Core:CreateTargetArrowFrame()
     self.targetArrowFrame = frame
 end
 
+local function TargetArrowPassesFilter(cfg)
+    local anyChecked = cfg.targetArrowShowEnemy or cfg.targetArrowShowFriendly
+        or cfg.targetArrowShowNeutral or cfg.targetArrowShowPet or cfg.targetArrowShowCritter
+    if not anyChecked then return false end
+
+    if cfg.targetArrowShowPet then
+        if UnitIsUnit and UnitIsUnit("target", "pet") then
+            return true
+        end
+        local creatureType = UnitCreatureType and UnitCreatureType("target") or ""
+        if creatureType == "Pet" then
+            return true
+        end
+    end
+
+    if cfg.targetArrowShowCritter then
+        local creatureType = UnitCreatureType and UnitCreatureType("target") or ""
+        if creatureType == "Critter" then
+            return true
+        end
+    end
+
+    -- UnitReaction 返回 1-8，1-4 敌对，5 中立，6-8 友好
+    local reaction = UnitReaction and UnitReaction("player", "target")
+    if reaction then
+        if cfg.targetArrowShowEnemy and reaction <= 4 then return true end
+        if cfg.targetArrowShowNeutral and reaction == 5 then return true end
+        if cfg.targetArrowShowFriendly and reaction >= 6 then return true end
+    else
+        if cfg.targetArrowShowFriendly then return true end
+    end
+
+    return false
+end
+
 function Core:UpdateTargetArrowVisibility()
     self:CreateTargetArrowFrame()
 
@@ -751,6 +786,12 @@ function Core:UpdateTargetArrowVisibility()
 
     local targetExists = UnitExists and UnitExists("target")
     if not targetExists then
+        frame.anchorFrame = nil
+        frame:Hide()
+        return
+    end
+
+    if not TargetArrowPassesFilter(cfg) then
         frame.anchorFrame = nil
         frame:Hide()
         return
@@ -800,6 +841,21 @@ function Core:ApplySystemAdjustSettings()
     end
     if cfg.targetArrowSize == nil then
         cfg.targetArrowSize = 28
+    end
+    if cfg.targetArrowShowEnemy == nil then
+        cfg.targetArrowShowEnemy = true
+    end
+    if cfg.targetArrowShowFriendly == nil then
+        cfg.targetArrowShowFriendly = false
+    end
+    if cfg.targetArrowShowNeutral == nil then
+        cfg.targetArrowShowNeutral = true
+    end
+    if cfg.targetArrowShowPet == nil then
+        cfg.targetArrowShowPet = false
+    end
+    if cfg.targetArrowShowCritter == nil then
+        cfg.targetArrowShowCritter = false
     end
     if cfg.showNPCAliveTime == nil then
         cfg.showNPCAliveTime = false

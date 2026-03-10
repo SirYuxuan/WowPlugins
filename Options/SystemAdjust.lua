@@ -224,10 +224,76 @@ function ns.BuildSystemAdjustOptions()
                             Core:ApplySystemAdjustSettings()
                         end,
                     },
+                    targetArrowFilterHeader = {
+                        type = "description",
+                        name = "显示箭头的目标类型：",
+                        order = 3,
+                        width = "full",
+                    },
+                    targetArrowShowEnemy = {
+                        type = "toggle",
+                        name = "敌方",
+                        order = 4,
+                        width = 0.6,
+                        disabled = function() return not SA().targetArrowEnabled end,
+                        get = function() return SA().targetArrowShowEnemy end,
+                        set = function(_, val)
+                            SA().targetArrowShowEnemy = val
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
+                    targetArrowShowFriendly = {
+                        type = "toggle",
+                        name = "友方",
+                        order = 5,
+                        width = 0.6,
+                        disabled = function() return not SA().targetArrowEnabled end,
+                        get = function() return SA().targetArrowShowFriendly end,
+                        set = function(_, val)
+                            SA().targetArrowShowFriendly = val
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
+                    targetArrowShowNeutral = {
+                        type = "toggle",
+                        name = "中立",
+                        order = 6,
+                        width = 0.6,
+                        disabled = function() return not SA().targetArrowEnabled end,
+                        get = function() return SA().targetArrowShowNeutral end,
+                        set = function(_, val)
+                            SA().targetArrowShowNeutral = val
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
+                    targetArrowShowPet = {
+                        type = "toggle",
+                        name = "宠物",
+                        order = 7,
+                        width = 0.6,
+                        disabled = function() return not SA().targetArrowEnabled end,
+                        get = function() return SA().targetArrowShowPet end,
+                        set = function(_, val)
+                            SA().targetArrowShowPet = val
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
+                    targetArrowShowCritter = {
+                        type = "toggle",
+                        name = "小动物",
+                        order = 8,
+                        width = 0.7,
+                        disabled = function() return not SA().targetArrowEnabled end,
+                        get = function() return SA().targetArrowShowCritter end,
+                        set = function(_, val)
+                            SA().targetArrowShowCritter = val
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
                     targetArrowDesc = {
                         type = "description",
-                        name = "箭头会尽量锚定在当前目标姓名板上方，并持续上下浮动。",
-                        order = 3,
+                        name = "箭头会尽量锚定在当前目标姓名板上方，并持续上下浮动。不勾选任何类型时对所有目标显示。",
+                        order = 9,
                         width = "full",
                     },
                 },

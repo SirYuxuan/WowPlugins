@@ -6,6 +6,15 @@ local LibRangeCheck = LibStub("LibRangeCheck-3.0", true)
 local ROW_HEIGHT = 30
 local DEFAULT_UPDATE_INTERVAL = 0.2
 
+local EXACT_UNIT_TOKENS = {
+    "player",
+    "party1", "party2", "party3", "party4",
+}
+
+for index = 1, 40 do
+    EXACT_UNIT_TOKENS[#EXACT_UNIT_TOKENS + 1] = "raid" .. index
+end
+
 local function DMcfg()
     local profile = Core.db.profile
     profile.distanceMonitor = profile.distanceMonitor or {}
@@ -75,17 +84,61 @@ local function SetSimpleOutlineColor(border, r, g, b, a)
     end
 end
 
+local function ResolveExactUnitToken(unit)
+    if type(UnitExists) ~= "function" or not UnitExists(unit) then
+        return nil
+    end
+
+    if UnitIsUnit and UnitIsUnit(unit, "player") then
+        return "player"
+    end
+
+    if type(UnitGUID) ~= "function" then
+        return unit
+    end
+
+    local unitGuid = UnitGUID(unit)
+    if not unitGuid then
+        return unit
+    end
+
+    for _, token in ipairs(EXACT_UNIT_TOKENS) do
+        if UnitExists(token) and UnitGUID(token) == unitGuid then
+            return token
+        end
+    end
+
+    return unit
+end
+
 local function GetExactDistance(unit)
     if type(UnitExists) ~= "function" or not UnitExists(unit) then
         return nil
     end
+
+    local exactUnit = ResolveExactUnitToken(unit)
+    if not exactUnit then
+        return nil
+    end
+
+    if type(UnitDistanceSquared) == "function" then
+        local squaredDistance, checkedDistance = UnitDistanceSquared(exactUnit)
+        if checkedDistance and type(squaredDistance) == "number" and squaredDistance >= 0 then
+            return math.sqrt(squaredDistance)
+        end
+    end
+
     if type(UnitPosition) ~= "function" then
         return nil
     end
 
     local px, py, pz, pMap = UnitPosition("player")
-    local ux, uy, uz, uMap = UnitPosition(unit)
-    if not (px and py and ux and uy and pMap and uMap and pMap == uMap) then
+    local ux, uy, uz, uMap = UnitPosition(exactUnit)
+    if not (px and py and ux and uy) then
+        return nil
+    end
+
+    if pMap and uMap and pMap ~= uMap then
         return nil
     end
 
@@ -116,6 +169,10 @@ local function GetRangeCheckText(unit)
     end
 
     if maxRange then
+        if minRange <= 0 then
+            return maxRange, string.format("≤%d", maxRange)
+        end
+
         return minRange, string.format("%d%s%d", minRange, separator, maxRange)
     end
 
@@ -256,17 +313,6 @@ function Core:CreateDistanceMonitorFrame()
     end)
 
     frame:SetSize(180, ROW_HEIGHT)
-
-    frame:SetScript("OnEnter", function(self)
-        Core:SetTooltipAnchor(GameTooltip, self, "ANCHOR_BOTTOM")
-        GameTooltip:AddLine("距离监控", 1, 0.82, 0)
-        GameTooltip:AddLine("仅显示当前目标与你的距离数值。", 1, 1, 1)
-        GameTooltip:AddLine("优先使用精确坐标，无法获取时回退 LibRangeCheck 范围。", 0.75, 1, 0.75)
-        GameTooltip:Show()
-    end)
-    frame:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
 
     frame:SetScript("OnEvent", function(_, event)
         if event == "PLAYER_ENTERING_WORLD"

@@ -1106,12 +1106,15 @@ local BUTTON_DEFS = {
                 end
             end,
         },
-        tooltips = {
-            "家园",
-            "\n",
-            L_BTN .. " 返回家园",
-            R_BTN .. " 打开家园面板",
-        },
+        tooltips = function(btn)
+            GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM", 0, -8)
+            GameTooltip:ClearLines()
+            GameTooltip:AddLine("家园", 1, 0.82, 0)
+            GameTooltip:AddLine(" ")
+            GameTooltip:AddLine(L_BTN .. " 返回家园", 1, 1, 1)
+            GameTooltip:AddLine(R_BTN .. " 打开家宅面板", 1, 1, 1)
+            GameTooltip:Show()
+        end,
     },
     TIMER = {
         id = "TIMER",

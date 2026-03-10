@@ -13,7 +13,7 @@ local function PMcfg()
     if cfg.fontSize == nil then cfg.fontSize = 14 end
     if cfg.updateInterval == nil then cfg.updateInterval = 1 end
     if cfg.showBackground == nil then cfg.showBackground = true end
-    if cfg.showBorder == nil then cfg.showBorder = true end
+    if cfg.showBorder == nil then cfg.showBorder = false end
     if type(cfg.backgroundColor) ~= "table" then
         cfg.backgroundColor = { r = 0, g = 0, b = 0, a = 0.32 }
     elseif cfg.backgroundColor.a == nil then
@@ -219,11 +219,11 @@ function Core:UpdatePerformanceMonitorLayout()
 
     frame:SetMovable(not cfg.locked)
     ApplyPerformanceMonitorFont(frame)
-    frame.text:SetPoint("LEFT", frame, "LEFT", 10, 0)
-    frame.text:SetPoint("RIGHT", frame, "RIGHT", -10, 0)
+    frame.text:SetPoint("LEFT", frame, "LEFT", 6, 0)
+    frame.text:SetPoint("RIGHT", frame, "RIGHT", -6, 0)
 
-    local width = math.max(140, math.ceil(frame.text:GetStringWidth() + 24))
-    frame:SetSize(width, 30)
+    local width = math.max(110, math.ceil(frame.text:GetStringWidth() + 14))
+    frame:SetSize(width, 24)
 
     if cfg.showBackground then
         local bg = cfg.backgroundColor or { r = 0, g = 0, b = 0, a = 0.32 }
@@ -232,12 +232,7 @@ function Core:UpdatePerformanceMonitorLayout()
         frame.bg:SetColorTexture(0, 0, 0, 0)
     end
 
-    if cfg.showBorder then
-        local border = cfg.borderColor or { r = 0, g = 0.6, b = 1, a = 0.45 }
-        SetSimpleOutlineColor(frame.border, border.r or 0, border.g or 0.6, border.b or 1, border.a or 0.45)
-    else
-        SetSimpleOutlineColor(frame.border, 0, 0, 0, 0)
-    end
+    SetSimpleOutlineColor(frame.border, 0, 0, 0, 0)
 end
 
 function Core:RefreshPerformanceMonitor()
@@ -317,12 +312,11 @@ function Core:CreatePerformanceMonitorFrame()
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
-    frame:SetSize(140, 30)
+    frame:SetSize(110, 24)
 
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints(frame)
 
-    frame.border = CreateSimpleOutline(frame, "BORDER", 1)
 
     frame.text = frame:CreateFontString(nil, "OVERLAY")
     frame.text:SetJustifyH("CENTER")

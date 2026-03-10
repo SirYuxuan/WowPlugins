@@ -313,6 +313,32 @@ function ns.BuildSystemAdjustOptions()
                     },
                 },
             },
+            dungeonFinderGroup = {
+                type = "group",
+                name = "地下城查找器",
+                order = 40,
+                inline = true,
+                args = {
+                    hideDungeonFinderButton = {
+                        type = "toggle",
+                        name = "隐藏地下城查找器按钮",
+                        desc = "隐藏系统微按钮栏中的地下城查找器按钮。",
+                        order = 1,
+                        width = 1.2,
+                        get = function() return SA().hideDungeonFinderButton end,
+                        set = function(_, val)
+                            SA().hideDungeonFinderButton = val
+                            Core:ApplySystemAdjustSettings()
+                        end,
+                    },
+                    dungeonFinderDesc = {
+                        type = "description",
+                        name = "已完全移除其它页面元素隐藏功能，只保留地下城查找器按钮隐藏。",
+                        order = 2,
+                        width = "full",
+                    },
+                },
+            },
         },
     }
 end

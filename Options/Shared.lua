@@ -14,6 +14,8 @@ function S.DMcfg() return Core.db.profile.distanceMonitor end
 
 function S.PMcfg() return Core.db.profile.performanceMonitor end
 
+function S.CHBcfg() return Core.db.profile.chatBeautify end
+
 function S.MIcfg() return Core.db.profile.misc end
 
 function S.SAcfg() return Core.db.profile.systemAdjust end

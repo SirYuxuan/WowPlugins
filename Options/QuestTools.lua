@@ -95,12 +95,12 @@ function ns.BuildQuestToolsOptions()
                 name = "项目间隔",
                 order = 7,
                 disabled = function() return not MI().questToolsEnabled end,
-                min = 1,
+                min = 0,
                 max = 300,
                 step = 1,
                 get = function() return MI().questToolsSpacing or 18 end,
                 set = function(_, val)
-                    MI().questToolsSpacing = math.max(1, math.min(300, val))
+                    MI().questToolsSpacing = math.max(0, math.min(300, val))
                     Core:ApplyMiscSettings()
                 end,
             },

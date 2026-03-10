@@ -231,6 +231,7 @@ local function GetOptions()
                     delveQuickLeave    = ns.BuildDelveQuickLeaveOptions(),
                     gameBar            = ns.BuildGameBarOptions(),
                     performanceMonitor = ns.BuildPerformanceMonitorOptions(),
+                    chatBeautify       = ns.BuildChatBeautifyOptions(),
                 },
             },
             -- ── 副本工具 ──────────────────────────────

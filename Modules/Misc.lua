@@ -1424,6 +1424,10 @@ function Core:ApplySystemAdjustSettings()
         cfg.npcTimeShowPhaseAlert = false
     end
 
+    if cfg.hideDungeonFinderButton == nil then
+        cfg.hideDungeonFinderButton = false
+    end
+
 
 
     if SetCVar then
@@ -1441,6 +1445,66 @@ function Core:ApplySystemAdjustSettings()
     self:ApplyNPCTooltipHook()
 
     self:UpdateMiscEventRegistration()
+
+    -- 仅处理地下城查找器按钮隐藏
+    self.systemAdjustHiddenFrame = self.systemAdjustHiddenFrame or
+        CreateFrame("Frame", addonName .. "SystemAdjustHiddenFrame", UIParent)
+
+    local hiddenParent = self.systemAdjustHiddenFrame
+    hiddenParent:Hide()
+
+    local function ResolveObject(path)
+        if type(path) ~= "string" or path == "" then
+            return nil
+        end
+
+        local current = _G
+        for part in string.gmatch(path, "[^%.]+") do
+            current = current and current[part]
+            if not current then
+                return nil
+            end
+        end
+
+        return current
+    end
+
+    local function SetObjectHidden(path, hide)
+        local obj = ResolveObject(path)
+        if not obj then return end
+
+        if hide then
+            if obj.GetParent and obj.SetParent and not obj.__YuXuanOriginalParent then
+                obj.__YuXuanOriginalParent = obj:GetParent()
+            end
+
+            if obj.SetParent then
+                pcall(obj.SetParent, obj, hiddenParent)
+            end
+
+            if obj.Hide then
+                pcall(obj.Hide, obj)
+            end
+
+            if obj.SetAlpha then
+                pcall(obj.SetAlpha, obj, 0)
+            end
+        else
+            if obj.SetParent and obj.__YuXuanOriginalParent then
+                pcall(obj.SetParent, obj, obj.__YuXuanOriginalParent)
+            end
+
+            if obj.SetAlpha then
+                pcall(obj.SetAlpha, obj, 1)
+            end
+
+            if obj.Show then
+                pcall(obj.Show, obj)
+            end
+        end
+    end
+
+    SetObjectHidden("LFDMicroButton", cfg.hideDungeonFinderButton)
 end
 
 function Core:ApplyGlobalTooltipHook()
@@ -3553,7 +3617,7 @@ function Core:UpdateQuestToolsLayout()
 
     local frame = self.questToolsFrame
 
-    local spacing = math.max(1, math.min(300, tonumber(cfg.questToolsSpacing) or INFOBAR_SPACING))
+    local spacing = math.max(0, math.min(300, tonumber(cfg.questToolsSpacing) or INFOBAR_SPACING))
 
     local fontPath = LibSharedMedia:Fetch("font", cfg.questToolsFont) or STANDARD_TEXT_FONT
 
@@ -3573,9 +3637,13 @@ function Core:UpdateQuestToolsLayout()
 
     local turnInState = cfg.autoQuestTurnIn and "|cFF33FF33开|r" or "|cFFFF5555关|r"
 
-    frame.announceButton.text:SetText("|cFF" .. labelHex .. "通报：|r" .. announceState)
+    local announceLabel = cfg.questToolsOrientation == "HORIZONTAL" and "通报" or "任务通报"
 
-    frame.turnInButton.text:SetText("|cFF" .. labelHex .. "交接：|r" .. turnInState)
+    local turnInLabel = cfg.questToolsOrientation == "HORIZONTAL" and "交接" or "自动交接"
+
+    frame.announceButton.text:SetText("|cFF" .. labelHex .. announceLabel .. "|r " .. announceState)
+
+    frame.turnInButton.text:SetText("|cFF" .. labelHex .. turnInLabel .. "|r " .. turnInState)
 
     frame.announceButton.text:SetTextColor(1, 1, 1, 1)
 
@@ -3585,9 +3653,14 @@ function Core:UpdateQuestToolsLayout()
 
     local height = math.max(26, math.ceil(frame.announceButton.text:GetStringHeight() + INFOBAR_PADDING_Y * 2))
 
-    local announceWidth = math.max(118, math.ceil(frame.announceButton.text:GetStringWidth() + INFOBAR_PADDING_X * 2))
+    local horizontalPadding = cfg.questToolsOrientation == "HORIZONTAL" and 12 or (INFOBAR_PADDING_X * 2)
 
-    local turnInWidth = math.max(118, math.ceil(frame.turnInButton.text:GetStringWidth() + INFOBAR_PADDING_X * 2))
+    local minButtonWidth = cfg.questToolsOrientation == "HORIZONTAL" and 68 or 118
+
+    local announceWidth = math.max(minButtonWidth,
+        math.ceil(frame.announceButton.text:GetStringWidth() + horizontalPadding))
+
+    local turnInWidth = math.max(minButtonWidth, math.ceil(frame.turnInButton.text:GetStringWidth() + horizontalPadding))
 
 
 

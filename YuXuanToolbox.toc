@@ -12,6 +12,7 @@ Utils\Utils.lua
 Core.lua
 Modules\QuickChat.lua
 Modules\Misc.lua
+Modules\ChatBeautify.lua
 Modules\GameBar.lua
 Modules\PerformanceMonitor.lua
 Modules\DistanceMonitor.lua
@@ -28,6 +29,7 @@ Options\InfoBar.lua
 Options\DelveQuickLeave.lua
 Options\GameBar.lua
 Options\PerformanceMonitor.lua
+Options\ChatBeautify.lua
 Options\RaidMarkers.lua
 Options\DistanceMonitor.lua
 Options\SystemAdjust.lua

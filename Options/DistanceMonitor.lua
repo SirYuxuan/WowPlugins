@@ -141,7 +141,7 @@ function ns.BuildDistanceMonitorOptions()
             },
             tips = {
                 type = "description",
-                name = "仅在有目标时显示；优先使用精确坐标，无法获取时回退 LibRangeCheck 范围，并按距离自动变色。",
+                name = "仅在有目标时显示；对玩家/队友等可解析单位优先显示精确距离，普通目标会回退为较细的范围显示，并按距离自动变色。",
                 order = 20,
                 width = "full",
             },

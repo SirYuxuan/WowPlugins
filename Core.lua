@@ -231,9 +231,7 @@ Core.DEFAULTS = {
             fontSize = 14,
             updateInterval = 1,
             showBackground = true,
-            showBorder = true,
             backgroundColor = { r = 0, g = 0, b = 0, a = 0.32 },
-            borderColor = { r = 0, g = 0.6, b = 1, a = 0.45 },
             point = {
                 point = "CENTER",
                 relativePoint = "CENTER",
@@ -347,6 +345,18 @@ Core.DEFAULTS = {
             npcTimeShowNPCID = false,
             npcTimeUseModifier = false,
             npcTimeShowPhaseAlert = false,
+            hideDungeonFinderButton = false,
+        },
+        chatBeautify = {
+            enabled = false,
+            font = "Friz Quadrata TT",
+            fontSize = 13,
+            backgroundAlpha = 0.12,
+            editBoxAlpha = 0.18,
+            hideMenuButton = true,
+            hideChannelButtons = true,
+            hideQuickJoinButton = true,
+            tabAlpha = 0.75,
         },
         instanceDifficulty = {
             enabled = true,
@@ -722,6 +732,9 @@ function Core:ApplyAllSettings()
     end
     if self.ApplyPerformanceMonitorSettings then
         self:ApplyPerformanceMonitorSettings()
+    end
+    if self.ApplyChatBeautifySettings then
+        self:ApplyChatBeautifySettings()
     end
     if self.ApplyAttributeSettings then
         self:ApplyAttributeSettings()

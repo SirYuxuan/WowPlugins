@@ -99,35 +99,9 @@ function ns.BuildPerformanceMonitorOptions()
                     Core:ApplyPerformanceMonitorSettings()
                 end,
             },
-            showBorder = {
-                type = "toggle",
-                name = "显示边框",
-                order = 12,
-                disabled = function() return not PM().enabled end,
-                get = function() return PM().showBorder end,
-                set = function(_, val)
-                    PM().showBorder = val
-                    Core:ApplyPerformanceMonitorSettings()
-                end,
-            },
-            borderColor = {
-                type = "color",
-                name = "边框颜色",
-                order = 13,
-                hasAlpha = true,
-                disabled = function() return not PM().enabled or not PM().showBorder end,
-                get = function()
-                    local c = PM().borderColor or { r = 0, g = 0.6, b = 1, a = 0.45 }
-                    return c.r, c.g, c.b, c.a
-                end,
-                set = function(_, r, g, b, a)
-                    PM().borderColor = { r = r, g = g, b = b, a = a }
-                    Core:ApplyPerformanceMonitorSettings()
-                end,
-            },
             tips = {
                 type = "description",
-                name = "显示独立 FPS / MS 文本；鼠标移入后会实时刷新所有已加载插件的内存占用列表。",
+                name = "显示独立 FPS / MS 文本；已移除边框，仅保留紧凑背景。鼠标移入后会实时刷新插件内存列表。",
                 order = 20,
                 width = "full",
             },

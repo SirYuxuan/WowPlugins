@@ -354,8 +354,226 @@ local function GetBattleNetOnlineCounts()
     return total, wowOnly
 end
 
-local function ShowFriendsTooltip(btn)
-    GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM", 0, -8)
+local function GetClassColoredName(name, classFile)
+    if not name or name == "" then
+        return "未知"
+    end
+
+    local color = classFile and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+    if color then
+        if color.colorStr then
+            return "|c" .. color.colorStr .. name .. "|r"
+        end
+    end
+
+    return name
+end
+
+local function SetContactTooltipOwner(tooltip, btn)
+    if not tooltip or not btn then return end
+    tooltip:SetOwner(btn, "ANCHOR_BOTTOM", 0, -12)
+end
+
+local function SplitFullName(fullName)
+    if type(fullName) ~= "string" or fullName == "" then
+        return "", ""
+    end
+
+    local name, realm = strsplit("-", fullName, 2)
+    return name or fullName, realm or ""
+end
+
+local function GetWoWFriendRows()
+    local rows = {}
+    local seen = {}
+    local getNumOnlineFriends = C_FriendList and C_FriendList.GetNumOnlineFriends
+    local getFriendInfoByIndex = C_FriendList and C_FriendList.GetFriendInfoByIndex
+
+    if not (getNumOnlineFriends and getFriendInfoByIndex) then
+        return rows
+    end
+
+    local totalOnline = getNumOnlineFriends() or 0
+    for index = 1, totalOnline do
+        local info = getFriendInfoByIndex(index)
+        if info and info.connected then
+            local name, realm = SplitFullName(info.name)
+            local key = (name or "") .. "-" .. (realm or "")
+            if not seen[key] then
+                seen[key] = true
+                table.insert(rows, {
+                    name = name,
+                    realm = realm,
+                    classFile = info.className,
+                    level = info.level,
+                    area = info.area,
+                    status = "好友",
+                })
+            end
+        end
+    end
+
+    table.sort(rows, function(a, b)
+        if (a.level or 0) == (b.level or 0) then
+            return (a.name or "") < (b.name or "")
+        end
+        return (a.level or 0) > (b.level or 0)
+    end)
+
+    return rows
+end
+
+local function GetBattleNetFriendRows()
+    local rows = {}
+    local seen = {}
+
+    if not (BNGetNumFriends and C_BattleNet and C_BattleNet.GetFriendAccountInfo) then
+        return rows
+    end
+
+    for friendIndex = 1, BNGetNumFriends() do
+        local accountInfo = C_BattleNet.GetFriendAccountInfo(friendIndex)
+        if accountInfo and accountInfo.gameAccountInfo and accountInfo.gameAccountInfo.isOnline then
+            local accountName = accountInfo.accountName or accountInfo.battleTag or "战网好友"
+            local gameAccounts = accountInfo.gameAccountInfo and { accountInfo.gameAccountInfo } or {}
+
+            if C_BattleNet.GetFriendNumGameAccounts and C_BattleNet.GetFriendGameAccountInfo then
+                local numGameAccounts = C_BattleNet.GetFriendNumGameAccounts(friendIndex) or 0
+                if numGameAccounts > 0 then
+                    gameAccounts = {}
+                    for gameIndex = 1, numGameAccounts do
+                        local gameAccountInfo = C_BattleNet.GetFriendGameAccountInfo(friendIndex, gameIndex)
+                        if gameAccountInfo then
+                            table.insert(gameAccounts, gameAccountInfo)
+                        end
+                    end
+                end
+            end
+
+            for _, gameAccountInfo in ipairs(gameAccounts) do
+                if gameAccountInfo.isOnline and gameAccountInfo.clientProgram == BNET_CLIENT_WOW then
+                    local characterName = gameAccountInfo.characterName or accountName
+                    local realmName = gameAccountInfo.realmName or ""
+                    local key = characterName .. "-" .. realmName
+                    if not seen[key] then
+                        seen[key] = true
+                        table.insert(rows, {
+                            name = characterName,
+                            realm = realmName,
+                            classFile = gameAccountInfo.className,
+                            level = gameAccountInfo.characterLevel,
+                            area = gameAccountInfo.areaName,
+                            accountName = accountName,
+                            status = "战网",
+                        })
+                    end
+                end
+            end
+        end
+    end
+
+    table.sort(rows, function(a, b)
+        if (a.level or 0) == (b.level or 0) then
+            return (a.name or "") < (b.name or "")
+        end
+        return (a.level or 0) > (b.level or 0)
+    end)
+
+    return rows
+end
+
+local function GetGuildMemberRows()
+    local rows = {}
+    if not (IsInGuild and IsInGuild() and GetNumGuildMembers and GetGuildRosterInfo) then
+        return rows
+    end
+
+    if GuildRoster then
+        GuildRoster()
+    end
+
+    local totalMembers = GetNumGuildMembers() or 0
+    for index = 1, totalMembers do
+        local fullName, _, _, level, _, zone, _, _, online, _, classFile = GetGuildRosterInfo(index)
+        if online then
+            local name, realm = SplitFullName(fullName)
+            table.insert(rows, {
+                name = name,
+                realm = realm,
+                classFile = classFile,
+                level = level,
+                area = zone,
+            })
+        end
+    end
+
+    table.sort(rows, function(a, b)
+        local areaA = a.area or ""
+        local areaB = b.area or ""
+        if areaA == areaB then
+            return (a.name or "") < (b.name or "")
+        end
+        return areaA < areaB
+    end)
+
+    return rows
+end
+
+local function AddContactRowsToTooltip(tooltip, rows, opts)
+    opts = opts or {}
+    local maxLines = opts.maxLines or 12
+    if not rows or #rows == 0 then
+        tooltip:AddLine(opts.emptyText or "暂无在线成员", 0.65, 0.65, 0.65)
+        return
+    end
+
+    local shown = math.min(#rows, maxLines)
+    for index = 1, shown do
+        local row = rows[index]
+        local left = GetClassColoredName(row.name, row.classFile)
+        if row.level and row.level > 0 then
+            left = string.format("[%d] %s", row.level, left)
+        end
+        if row.realm and row.realm ~= "" then
+            left = left .. string.format(" |cFF888888-%s|r", row.realm)
+        end
+
+        local right = row.area or ""
+        if row.accountName and row.accountName ~= "" then
+            right = right ~= "" and (right .. " | ") or ""
+            right = right .. row.accountName
+        end
+
+        tooltip:AddDoubleLine(left, right, 1, 1, 1, 0.75, 0.85, 1)
+    end
+
+    if #rows > shown then
+        tooltip:AddLine(string.format("还有 %d 位未显示", #rows - shown), 0.75, 0.75, 0.75)
+    end
+end
+
+local function StartContactTooltipTicker(btn, refreshFunc)
+    if not btn or not refreshFunc then return end
+
+    if btn.tooltipTicker then
+        btn.tooltipTicker:Cancel()
+        btn.tooltipTicker = nil
+    end
+
+    btn.tooltipTicker = C_Timer.NewTicker(2, function()
+        if GameTooltip:IsOwned(btn) then
+            refreshFunc(btn, true)
+        else
+            if btn.tooltipTicker then
+                btn.tooltipTicker:Cancel()
+                btn.tooltipTicker = nil
+            end
+        end
+    end)
+end
+
+local function ShowFriendsTooltip(btn, skipTicker)
+    SetContactTooltipOwner(GameTooltip, btn)
     GameTooltip:ClearLines()
     GameTooltip:AddLine("好友", 1, 0.82, 0)
     GameTooltip:AddLine(" ")
@@ -363,13 +581,28 @@ local function ShowFriendsTooltip(btn)
     local totalFriends = C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetNumFriends() or 0
     local onlineFriends = C_FriendList and C_FriendList.GetNumOnlineFriends and C_FriendList.GetNumOnlineFriends() or 0
     local bnTotal, bnWow = GetBattleNetOnlineCounts()
+    local bnRows = GetBattleNetFriendRows()
+    local wowRows = GetWoWFriendRows()
 
     GameTooltip:AddDoubleLine("战网在线", tostring(bnTotal), 1, 1, 1, 0.3, 0.8, 1)
     GameTooltip:AddDoubleLine("魔兽战网在线", tostring(bnWow), 1, 1, 1, 0.3, 1, 0.6)
     GameTooltip:AddDoubleLine("角色好友在线", string.format("%d/%d", onlineFriends, totalFriends), 1, 1, 1, 0.2, 1, 0.2)
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("战网好友", 1, 0.82, 0)
+    AddContactRowsToTooltip(GameTooltip, bnRows, { emptyText = "暂无在线战网好友", maxLines = 8 })
+
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddLine("角色好友", 1, 0.82, 0)
+    AddContactRowsToTooltip(GameTooltip, wowRows, { emptyText = "暂无在线角色好友", maxLines = 8 })
+
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine(L_BTN .. " 打开好友列表", 1, 1, 1)
     GameTooltip:Show()
+
+    if not skipTicker then
+        StartContactTooltipTicker(btn, ShowFriendsTooltip)
+    end
 end
 
 local function OpenFriendsList()
@@ -401,16 +634,20 @@ local function OpenFriendsList()
     return false
 end
 
-local function ShowGuildTooltip(btn)
-    GameTooltip:SetOwner(btn, "ANCHOR_BOTTOM", 0, -8)
+local function ShowGuildTooltip(btn, skipTicker)
+    SetContactTooltipOwner(GameTooltip, btn)
     GameTooltip:ClearLines()
     GameTooltip:AddLine("公会", 1, 0.82, 0)
     GameTooltip:AddLine(" ")
 
     if IsInGuild and IsInGuild() then
         local total, online = GetNumGuildMembers()
+        local rows = GetGuildMemberRows()
         GameTooltip:AddDoubleLine("在线成员", string.format("%d/%d", tonumber(online) or 0, tonumber(total) or 0), 1, 1, 1,
             0.2, 1, 0.2)
+        GameTooltip:AddLine(" ")
+        AddContactRowsToTooltip(GameTooltip, rows, { emptyText = "暂无在线公会成员", maxLines = 12 })
+        GameTooltip:AddLine(" ")
         GameTooltip:AddLine(L_BTN .. " 公会界面", 1, 1, 1)
         GameTooltip:AddLine(R_BTN .. " 公会名单", 1, 1, 1)
     else
@@ -418,6 +655,10 @@ local function ShowGuildTooltip(btn)
     end
 
     GameTooltip:Show()
+
+    if not skipTicker then
+        StartContactTooltipTicker(btn, ShowGuildTooltip)
+    end
 end
 
 local function GetAvailableHearthstones()
@@ -1589,6 +1830,10 @@ local function ShowBtnTooltip(btn)
 end
 
 local function HideBtnTooltip(btn)
+    if btn and btn.tooltipTicker then
+        btn.tooltipTicker:Cancel()
+        btn.tooltipTicker = nil
+    end
     local def = GetDef(btn._defID)
     if def and def.tooltipsLeave then def.tooltipsLeave() end
     GameTooltip:Hide()

@@ -291,6 +291,7 @@ local MapMarkers = {
 local quickWaypointInput
 local quickWaypointHolder
 local quickWaypointExtraArea
+local quickWaypointButton
 
 --------------------------------------------------------------------------------
 -- 工具函数
@@ -983,26 +984,66 @@ local function ParseQuickCoordInput(text)
     return x, y
 end
 
+local function ApplyQuickWaypointFromInput(text)
+    local mapID = WorldMapFrame and WorldMapFrame:GetMapID()
+    if not mapID then
+        return false, "当前地图不可用"
+    end
+
+    local x, y = ParseQuickCoordInput(text)
+    if not x or not y then
+        return false, "坐标格式错误，示例：12.34 56.78"
+    end
+
+    local waypoint = UiMapPoint.CreateFromCoordinates(mapID, x, y)
+    if not waypoint then
+        return false, "当前地图无法创建导航点"
+    end
+
+    C_Map.SetUserWaypoint(waypoint)
+    if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
+        C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+    end
+
+    print(string.format("|cFF33FF99雨轩工具箱|r丨已设置导航点：%.2f %.2f", x * 100, y * 100))
+    return true
+end
+
 local function InitializeQuickWaypointInput()
     if quickWaypointInput or not WorldMapFrame then return end
-    quickWaypointHolder = CreateFrame("Frame", nil, WorldMapFrame)
-    quickWaypointHolder:SetHeight(24)
-    quickWaypointHolder:SetPoint("BOTTOMLEFT", WorldMapFrame, "TOPLEFT", 0, 6)
-    quickWaypointHolder:SetPoint("BOTTOMRIGHT", WorldMapFrame, "TOPRIGHT", 0, 6)
+
+    quickWaypointHolder = CreateFrame("Frame", nil, WorldMapFrame, "BackdropTemplate")
+    quickWaypointHolder:SetHeight(30)
+    quickWaypointHolder:SetPoint("TOPLEFT", WorldMapFrame, "BOTTOMLEFT", 0, -2)
+    quickWaypointHolder:SetPoint("TOPRIGHT", WorldMapFrame, "BOTTOMRIGHT", 0, -2)
     quickWaypointHolder:SetFrameStrata("HIGH")
     quickWaypointHolder:SetFrameLevel(3600)
+    quickWaypointHolder:Hide()
 
-    local holderBg = quickWaypointHolder:CreateTexture(nil, "BACKGROUND")
-    holderBg:SetAllPoints()
-    holderBg:SetColorTexture(0, 0, 0, 0.5)
+    quickWaypointHolder:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    quickWaypointHolder:SetBackdropColor(0.08, 0.08, 0.09, 0.98)
+    quickWaypointHolder:SetBackdropBorderColor(0.32, 0.32, 0.36, 1)
 
-    quickWaypointExtraArea = CreateFrame("Frame", nil, quickWaypointHolder)
-    quickWaypointExtraArea:SetPoint("TOPLEFT", quickWaypointHolder, "TOPLEFT", 188, 0)
-    quickWaypointExtraArea:SetPoint("BOTTOMRIGHT", quickWaypointHolder, "BOTTOMRIGHT", -8, 0)
+    quickWaypointHolder.playerText = quickWaypointHolder:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    quickWaypointHolder.playerText:SetPoint("LEFT", quickWaypointHolder, "LEFT", 12, 0)
+    quickWaypointHolder.playerText:SetJustifyH("LEFT")
+    quickWaypointHolder.playerText:SetTextColor(0.95, 0.82, 0.18)
+    quickWaypointHolder.playerText:SetText("玩家: --")
+
+    quickWaypointHolder.cursorText = quickWaypointHolder:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    quickWaypointHolder.cursorText:SetPoint("LEFT", quickWaypointHolder.playerText, "RIGHT", 18, 0)
+    quickWaypointHolder.cursorText:SetJustifyH("LEFT")
+    quickWaypointHolder.cursorText:SetTextColor(0.82, 0.88, 0.95)
+    quickWaypointHolder.cursorText:SetText("鼠标: --")
 
     quickWaypointInput = CreateFrame("EditBox", nil, quickWaypointHolder, "InputBoxTemplate")
-    quickWaypointInput:SetSize(170, 18)
-    quickWaypointInput:SetPoint("LEFT", quickWaypointHolder, "LEFT", 10, 0)
+    quickWaypointInput:SetSize(150, 20)
+    quickWaypointInput:SetPoint("RIGHT", quickWaypointHolder, "RIGHT", -72, 0)
     quickWaypointInput:SetAutoFocus(false)
     quickWaypointInput:SetMaxLetters(32)
     quickWaypointInput:SetTextInsets(6, 6, 0, 0)
@@ -1013,6 +1054,24 @@ local function InitializeQuickWaypointInput()
     quickWaypointInput.hint:SetPoint("LEFT", quickWaypointInput, "LEFT", 8, 0)
     quickWaypointInput.hint:SetText("坐标: 12.34 56.78")
 
+    quickWaypointButton = CreateFrame("Button", nil, quickWaypointHolder, "UIPanelButtonTemplate")
+    quickWaypointButton:SetSize(56, 20)
+    quickWaypointButton:SetPoint("LEFT", quickWaypointInput, "RIGHT", 8, 0)
+    quickWaypointButton:SetText("导航")
+    quickWaypointButton:SetScript("OnClick", function()
+        local ok, err = ApplyQuickWaypointFromInput(quickWaypointInput:GetText())
+        if ok then
+            quickWaypointInput:ClearFocus()
+        elseif err then
+            print("|cFF33FF99雨轩工具箱|r丨" .. err)
+        end
+    end)
+
+    quickWaypointExtraArea = CreateFrame("Frame", nil, quickWaypointHolder)
+    quickWaypointExtraArea:SetPoint("LEFT", quickWaypointHolder.cursorText, "RIGHT", 18, 0)
+    quickWaypointExtraArea:SetPoint("RIGHT", quickWaypointInput, "LEFT", -10, 0)
+    quickWaypointExtraArea:SetHeight(20)
+
     quickWaypointInput:SetScript("OnTextChanged", function(self)
         self.hint:SetShown(not self:GetText() or self:GetText() == "")
     end)
@@ -1021,64 +1080,24 @@ local function InitializeQuickWaypointInput()
         if self.cursorOffset == nil then self.cursorOffset = 0 end
     end)
     quickWaypointInput:SetScript("OnEnterPressed", function(self)
-        local mapID = WorldMapFrame and WorldMapFrame:GetMapID()
-        if not mapID then
-            self:ClearFocus(); return
-        end
-        local x, y = ParseQuickCoordInput(self:GetText())
-        if not x or not y then
-            print("|cFF33FF99雨轩工具箱|r丨坐标格式错误，示例：12.34 56.78")
+        local ok, err = ApplyQuickWaypointFromInput(self:GetText())
+        if not ok and err then
+            print("|cFF33FF99雨轩工具箱|r丨" .. err)
             return
-        end
-        local waypoint = UiMapPoint.CreateFromCoordinates(mapID, x, y)
-        if waypoint then
-            C_Map.SetUserWaypoint(waypoint)
-            if C_SuperTrack and C_SuperTrack.SetSuperTrackedUserWaypoint then
-                C_SuperTrack.SetSuperTrackedUserWaypoint(true)
-            end
-            print(string.format("|cFF33FF99雨轩工具箱|r丨已设置导航点：%.2f %.2f", x * 100, y * 100))
         end
         self:ClearFocus()
     end)
-end
-
--- ========================================================================================================================
--- 坐标显示
--- ========================================================================================================================
-local coordFrame
-
-local function CreateCoordDisplay()
-    if coordFrame then return end
-    if not WorldMapFrame then return end
-
-    local parent = WorldMapFrame.ScrollContainer or WorldMapFrame
-    coordFrame = CreateFrame("Frame", nil, parent)
-    coordFrame:SetSize(200, 36)
-    coordFrame:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 4, 4)
-    coordFrame:SetFrameStrata("HIGH")
-    coordFrame:SetFrameLevel(2500)
-
-    local bg = coordFrame:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.55)
-
-    coordFrame.playerText = coordFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    coordFrame.playerText:SetPoint("TOPLEFT", 6, -4)
-    coordFrame.playerText:SetTextColor(0.2, 1, 0.73)
-    coordFrame.playerText:SetText("玩家: --")
-
-    coordFrame.cursorText = coordFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    coordFrame.cursorText:SetPoint("TOPLEFT", 6, -18)
-    coordFrame.cursorText:SetTextColor(1, 0.82, 0)
-    coordFrame.cursorText:SetText("鼠标: --")
 
     local elapsed = 0
-    coordFrame:SetScript("OnUpdate", function(self, dt)
+    quickWaypointHolder:SetScript("OnUpdate", function(self, dt)
         elapsed = elapsed + dt
         if elapsed < 0.05 then return end
         elapsed = 0
 
-        -- 更新玩家坐标
+        if not WorldMapFrame or not WorldMapFrame:IsShown() then
+            return
+        end
+
         local mapID = WorldMapFrame:GetMapID()
         if mapID then
             local pos = C_Map.GetPlayerMapPosition(mapID, "player")
@@ -1091,7 +1110,6 @@ local function CreateCoordDisplay()
             self.playerText:SetText("玩家: --")
         end
 
-        -- 更新鼠标坐标
         if WorldMapFrame.ScrollContainer and WorldMapFrame.ScrollContainer:IsMouseOver() then
             local cursorX, cursorY = WorldMapFrame.ScrollContainer:GetNormalizedCursorPosition()
             if cursorX and cursorY and cursorX >= 0 and cursorX <= 1 and cursorY >= 0 and cursorY <= 1 then
@@ -1103,6 +1121,16 @@ local function CreateCoordDisplay()
             self.cursorText:SetText("鼠标: --")
         end
     end)
+end
+
+-- ========================================================================================================================
+-- 坐标显示
+-- ========================================================================================================================
+local coordFrame
+
+local function CreateCoordDisplay()
+    InitializeQuickWaypointInput()
+    coordFrame = quickWaypointHolder
 end
 
 local function ToggleCoordDisplay()

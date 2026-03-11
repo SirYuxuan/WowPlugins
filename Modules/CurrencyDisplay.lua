@@ -306,6 +306,12 @@ function Core:CreateCurrencyFrame()
     frame:SetScript("OnEvent", function()
         Core:UpdateCurrencyDisplay()
     end)
+    frame:SetScript("OnEnter", function(self)
+        ShowCurrencyTooltip(self)
+    end)
+    frame:SetScript("OnLeave", function(self)
+        HideCurrencyTooltip(self)
+    end)
 
     self.currencyFrame = frame
 end
@@ -320,6 +326,7 @@ function Core:AcquireCurrencyItem(index)
 
     local item = CreateFrame("Frame", nil, self.currencyFrame)
     item:SetSize(1, 1)
+    item:EnableMouse(true)
 
     item.icon = item:CreateTexture(nil, "ARTWORK")
     item.icon:SetPoint("LEFT", item, "LEFT", 0, 0)
@@ -328,6 +335,13 @@ function Core:AcquireCurrencyItem(index)
     item.text = item:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     item.text:SetPoint("LEFT", item, "LEFT", 0, 0)
     item.text:SetJustifyH("LEFT")
+
+    item:SetScript("OnEnter", function()
+        ShowCurrencyTooltip(Core.currencyFrame)
+    end)
+    item:SetScript("OnLeave", function()
+        HideCurrencyTooltip(Core.currencyFrame)
+    end)
 
     self.currencyItems[index] = item
     return item
@@ -362,24 +376,14 @@ local function BuildCountText(data)
     return tostring(quantity)
 end
 
--- Display update
-
-function Core:UpdateCurrencyDisplay()
-    if not self.db or not self.currencyFrame then
-        return
+function Core:GetCurrencyDisplayEntries()
+    if not self.db then
+        return {}
     end
 
     local cfg = self.db.profile.currency
-    if not cfg.enabled then
-        self.currencyFrame:Hide()
-        return
-    end
-
-    local selected = EnsureSelected(cfg)
-    local frame = self.currencyFrame
-    local fontPath = LibSharedMedia:Fetch("font", cfg.font) or STANDARD_TEXT_FONT
-
     local entries = {}
+
     if cfg.showMoney then
         local moneyAmount = 0
         if GetMoney then
@@ -387,12 +391,13 @@ function Core:UpdateCurrencyDisplay()
         end
         table.insert(entries, {
             kind = "money",
-            name = "gold",
+            name = GOLD_AMOUNT_SYMBOL or "金币",
             quantity = moneyAmount,
             icon = DEFAULT_MONEY_ICON,
         })
     end
 
+    local selected = EnsureSelected(cfg)
     local orderedIDs = self:GetOrderedSelectedCurrencyIDs()
     for _, cid in ipairs(orderedIDs) do
         if selected[cid] then
@@ -412,11 +417,71 @@ function Core:UpdateCurrencyDisplay()
     if #entries == 0 then
         entries[1] = {
             kind = "empty",
-            name = "No Currency Selected",
+            name = "未选择货币",
             quantity = 0,
             icon = DEFAULT_MONEY_ICON,
         }
     end
+
+    return entries
+end
+
+local function BuildTooltipLabel(data)
+    local icon = data.icon or DEFAULT_MONEY_ICON
+    local iconMarkup = string.format("|T%d:14:14:0:0|t", icon)
+    if data.kind == "money" then
+        return iconMarkup .. " 金币",
+            GetMoneyString and GetMoneyString(data.quantity or 0, false) or FormatMoneyShort(data.quantity or 0)
+    end
+    if data.kind == "empty" then
+        return iconMarkup .. " " .. (data.name or "未选择货币"), "-"
+    end
+
+    local countText = BreakUpLargeNumbers and BreakUpLargeNumbers(data.quantity or 0) or tostring(data.quantity or 0)
+    return iconMarkup .. " " .. (data.name or ("ID " .. tostring(data.id or ""))), countText
+end
+
+local function ShowCurrencyTooltip(frame)
+    if not frame or not Core.db or not Core.db.profile.currency.enabled then
+        return
+    end
+
+    local entries = Core:GetCurrencyDisplayEntries()
+    GameTooltip:SetOwner(frame, "ANCHOR_BOTTOM", 0, -8)
+    GameTooltip:ClearLines()
+    GameTooltip:AddLine("货币状态条", 1, 0.82, 0)
+    GameTooltip:AddLine(" ")
+
+    for _, data in ipairs(entries) do
+        local left, right = BuildTooltipLabel(data)
+        GameTooltip:AddDoubleLine(left, right, 1, 1, 1, 0.3, 1, 0.6)
+    end
+
+    GameTooltip:Show()
+end
+
+local function HideCurrencyTooltip(frame)
+    if GameTooltip:IsOwned(frame) then
+        GameTooltip:Hide()
+    end
+end
+
+-- Display update
+
+function Core:UpdateCurrencyDisplay()
+    if not self.db or not self.currencyFrame then
+        return
+    end
+
+    local cfg = self.db.profile.currency
+    if not cfg.enabled then
+        self.currencyFrame:Hide()
+        return
+    end
+
+    local frame = self.currencyFrame
+    local fontPath = LibSharedMedia:Fetch("font", cfg.font) or STANDARD_TEXT_FONT
+    local entries = self:GetCurrencyDisplayEntries()
 
     local isVertical = (cfg.orientation == "VERTICAL")
     local x, y = 0, 0

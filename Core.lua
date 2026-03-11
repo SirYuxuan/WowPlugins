@@ -379,6 +379,10 @@ Core.DEFAULTS = {
             showLeaveButton = true,
             frameScale = 1,
             fontSize = 13,
+            fontOutline = true,
+            orientation = "VERTICAL",
+            backgroundTexture = "Yuxuan",
+            backgroundAlpha = 0.18,
             point = {
                 point = "CENTER",
                 relativePoint = "CENTER",
@@ -387,6 +391,27 @@ Core.DEFAULTS = {
             },
         },
         -- 图标收纳模块已移除，不再保留 iconCollector 配置
+        eventTracker = {
+            enabled = true,
+            fontSize = 12,
+            fontOutline = true,
+            trackerWidth = 220,
+            trackerHeight = 28,
+            backdropAlpha = 0.6,
+            alertEnabled = true,
+            alertSecond = 60,
+            -- 各事件默认启用
+            weeklyMN = true,
+            professionsWeeklyMN = true,
+            stormarionAssault = true,
+            weeklyTWW = true,
+            nightfall = true,
+            theaterTroupe = true,
+            ecologicalSuccession = true,
+            ringingDeeps = true,
+            spreadingTheLight = true,
+            underworldOperative = true,
+        },
         mapGuide = {
             enableMapMarkers = false,
             enableCoordDisplay = false,
@@ -799,7 +824,7 @@ end
 
 function Core:HandleProfileChanged()
     local currentProfileName = self.db and self.db.GetCurrentProfile and self.db:GetCurrentProfile() or
-    SHARED_PROFILE_NAME
+        SHARED_PROFILE_NAME
     ApplySharedProfileSelection(currentProfileName)
     self:ApplyAllSettings()
 end
@@ -828,6 +853,9 @@ function Core:ApplyAllSettings()
     end
     if self.ApplyInstanceDifficultySettings then
         self:ApplyInstanceDifficultySettings()
+    end
+    if self.ApplyEventTrackerSettings then
+        self:ApplyEventTrackerSettings()
     end
     if self.ApplyDistanceMonitorSettings then
         self:ApplyDistanceMonitorSettings()
@@ -949,6 +977,9 @@ function Core:Initialize()
     self:CreateCastBars()
     if self.CreateInstanceDifficultyFrame then
         self:CreateInstanceDifficultyFrame()
+    end
+    if self.CreateEventTrackerFrame then
+        self:CreateEventTrackerFrame()
     end
     self:InitializeMapGuide()
     -- 图标收纳模块已移除，这里不再执行其初始化

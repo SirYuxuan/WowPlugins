@@ -250,6 +250,7 @@ local function GetOptions()
                 order = 40,
                 args = {
                     mapGuide = ns.BuildMapGuideOptions(),
+                    eventTracker = ns.BuildEventTrackerOptions(),
                 },
             },
             -- ── 系统调节 ──────────────────────────────

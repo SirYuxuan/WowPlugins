@@ -6,15 +6,6 @@ local LibRangeCheck = LibStub("LibRangeCheck-3.0", true)
 local ROW_HEIGHT = 30
 local DEFAULT_UPDATE_INTERVAL = 0.2
 
-local EXACT_UNIT_TOKENS = {
-    "player",
-    "party1", "party2", "party3", "party4",
-}
-
-for index = 1, 40 do
-    EXACT_UNIT_TOKENS[#EXACT_UNIT_TOKENS + 1] = "raid" .. index
-end
-
 local function DMcfg()
     local profile = Core.db.profile
     profile.distanceMonitor = profile.distanceMonitor or {}
@@ -84,63 +75,9 @@ local function SetSimpleOutlineColor(border, r, g, b, a)
     end
 end
 
-local function ResolveExactUnitToken(unit)
-    if type(UnitExists) ~= "function" or not UnitExists(unit) then
-        return nil
-    end
-
-    if UnitIsUnit and UnitIsUnit(unit, "player") then
-        return "player"
-    end
-
-    return unit
-end
-
-local function GetExactDistance(unit)
-    if type(UnitExists) ~= "function" or not UnitExists(unit) then
-        return nil
-    end
-
-    local exactUnit = ResolveExactUnitToken(unit)
-    if not exactUnit then
-        return nil
-    end
-
-    if type(UnitDistanceSquared) == "function" then
-        local squaredDistance, checkedDistance = UnitDistanceSquared(exactUnit)
-        if checkedDistance and type(squaredDistance) == "number" and squaredDistance >= 0 then
-            return math.sqrt(squaredDistance)
-        end
-    end
-
-    if type(UnitPosition) ~= "function" then
-        return nil
-    end
-
-    local px, py, pz, pMap = UnitPosition("player")
-    local ux, uy, uz, uMap = UnitPosition(exactUnit)
-    if not (px and py and ux and uy) then
-        return nil
-    end
-
-    if pMap and uMap and pMap ~= uMap then
-        return nil
-    end
-
-    local dx = px - ux
-    local dy = py - uy
-    local dz = ((pz or 0) - (uz or 0))
-    local distance = math.sqrt(dx * dx + dy * dy + dz * dz)
-    if distance >= 0 then
-        return distance
-    end
-
-    return nil
-end
-
 local function GetRangeCheckText(unit)
     if not LibRangeCheck or type(LibRangeCheck.GetRange) ~= "function" then
-        return nil, nil
+        return nil, nil, nil
     end
 
     local separator = DMcfg().rangeSeparator
@@ -150,45 +87,42 @@ local function GetRangeCheckText(unit)
 
     local minRange, maxRange = LibRangeCheck:GetRange(unit)
     if not minRange then
-        return nil, nil
+        return nil, nil, nil
     end
 
     if maxRange then
         if minRange <= 0 then
-            return maxRange, string.format("≤%d", maxRange)
+            return maxRange, string.format("≤%d", maxRange), maxRange
         end
 
-        return minRange, string.format("%d%s%d", minRange, separator, maxRange)
+        return minRange, string.format("%d%s%d", minRange, separator, maxRange), maxRange
     end
 
-    return minRange, string.format("%d+", minRange)
+    return minRange, string.format("%d+", minRange), nil
 end
 
 local function GetDistanceInfo(unit)
-    local exactDistance = GetExactDistance(unit)
-    if exactDistance then
-        return exactDistance, true, string.format("%.1f", exactDistance)
+    local minRange, rangeText, maxRange = GetRangeCheckText(unit)
+    if minRange then
+        return minRange, maxRange, rangeText
     end
 
-    local fallbackDistance, fallbackText = GetRangeCheckText(unit)
-    if fallbackDistance then
-        return fallbackDistance, false, fallbackText
-    end
-
-    return nil, false, "--"
+    return nil, nil, ""
 end
 
-local function GetDistanceColor(distance)
-    if not distance then
-        return 0.7, 0.7, 0.7
-    elseif distance <= 8 then
-        return 0.2, 1, 0.35
-    elseif distance <= 15 then
-        return 1, 0.9, 0.2
-    elseif distance <= 30 then
-        return 1, 0.55, 0.2
+local function GetDistanceColor(minRange)
+    if not minRange then
+        return 0.9, 0.9, 0.9
+    elseif minRange >= 40 then
+        return 1, 0, 0
+    elseif minRange >= 30 then
+        return 1, 1, 0
+    elseif minRange >= 20 then
+        return 0.039, 1, 0
+    elseif minRange >= 5 then
+        return 0.063, 1, 0.941
     else
-        return 1, 0.2, 0.2
+        return 0.9, 0.9, 0.9
     end
 end
 
@@ -246,13 +180,13 @@ function Core:RefreshDistanceMonitor()
 
     local frame = self.distanceMonitorFrame
     if type(UnitExists) == "function" and UnitExists("target") then
-        local distance, _, rangeText = GetDistanceInfo("target")
-        local r, g, b = GetDistanceColor(distance)
+        local minRange, _, rangeText = GetDistanceInfo("target")
+        local r, g, b = GetDistanceColor(minRange)
         frame.text:SetText(rangeText)
         frame.text:SetTextColor(r, g, b, 1)
     else
-        frame.text:SetText("--")
-        frame.text:SetTextColor(0.7, 0.7, 0.7, 1)
+        frame.text:SetText("")
+        frame.text:SetTextColor(0.9, 0.9, 0.9, 1)
     end
 
     self:UpdateDistanceMonitorLayout()

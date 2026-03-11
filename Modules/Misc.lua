@@ -160,7 +160,7 @@ local RAID_ACTION_BUTTONS = {
 
         label = "倒",
 
-        texture = nil,
+        texture = "Interface\\Icons\\INV_Misc_PocketWatch_01",
 
         tooltipTitle = "倒计时",
 
@@ -1153,7 +1153,9 @@ function Core:CreateTargetArrowFrame()
 
     frame:SetSize(40, 40)
 
-    frame:SetFrameStrata("HIGH")
+    frame:SetFrameStrata("MEDIUM")
+
+    frame:SetFrameLevel(1)
 
     frame:SetIgnoreParentScale(true)
 
@@ -1175,12 +1177,45 @@ function Core:CreateTargetArrowFrame()
 
     frame.arrow:SetVertexColor(0.12, 1, 0.32, 0.95)
 
+    local function ShouldKeepShowing(self)
+        local anchor = self.anchorFrame
+        if not anchor or not anchor:IsShown() then
+            return false
+        end
+
+        if UnitExists and not UnitExists("target") then
+            return false
+        end
+
+        if UnitIsVisible and not UnitIsVisible("target") then
+            return false
+        end
+
+        local nameplate = anchor.GetParent and anchor:GetParent() or nil
+        if nameplate then
+            if nameplate.IsShown and not nameplate:IsShown() then
+                return false
+            end
+
+            if nameplate.GetEffectiveAlpha and nameplate:GetEffectiveAlpha() < 0.95 then
+                return false
+            end
+        end
+
+        if anchor.GetEffectiveAlpha and anchor:GetEffectiveAlpha() < 0.95 then
+            return false
+        end
+
+        return true
+    end
+
 
 
     frame:SetScript("OnUpdate", function(self, elapsed)
         self._animTime = (self._animTime or 0) + elapsed
 
-        if not self.anchorFrame or not self.anchorFrame:IsShown() then
+        if not ShouldKeepShowing(self) then
+            self.anchorFrame = nil
             self:Hide()
 
             return
@@ -1283,6 +1318,14 @@ function Core:UpdateTargetArrowVisibility()
         return
     end
 
+    if UnitIsVisible and not UnitIsVisible("target") then
+        frame.anchorFrame = nil
+
+        frame:Hide()
+
+        return
+    end
+
 
 
     if not TargetArrowPassesFilter(cfg) then
@@ -1301,6 +1344,14 @@ function Core:UpdateTargetArrowVisibility()
     local anchor = nameplate and (nameplate.UnitFrame or nameplate)
 
     if not anchor or not anchor:IsShown() then
+        frame.anchorFrame = nil
+
+        frame:Hide()
+
+        return
+    end
+
+    if nameplate.GetEffectiveAlpha and nameplate:GetEffectiveAlpha() < 0.95 then
         frame.anchorFrame = nil
 
         frame:Hide()

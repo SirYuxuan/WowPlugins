@@ -1,5 +1,6 @@
 local addonName, ns = ...
 local Core = ns.Core
+local LibSharedMedia = LibStub("LibSharedMedia-3.0")
 
 local DUNGEON_DIFFICULTIES = {
     { id = 1, key = "NORMAL", label = "普通难度", display = "5人普通本" },
@@ -54,6 +55,10 @@ local function IDcfg()
     if cfg.showLeaveButton == nil then cfg.showLeaveButton = true end
     if cfg.frameScale == nil then cfg.frameScale = 1 end
     if cfg.fontSize == nil then cfg.fontSize = 13 end
+    if cfg.fontOutline == nil then cfg.fontOutline = true end
+    if cfg.orientation == nil then cfg.orientation = "VERTICAL" end
+    if cfg.backgroundTexture == nil then cfg.backgroundTexture = "Yuxuan" end
+    if cfg.backgroundAlpha == nil then cfg.backgroundAlpha = 0.18 end
     if not cfg.point then
         cfg.point = {
             point = "CENTER",
@@ -89,24 +94,22 @@ local function SendAssistantMessage(message)
 end
 
 local function CreateFlatButton(parent, width, height, text, kind)
-    local button = CreateFrame("Button", nil, parent, "BackdropTemplate")
+    local button = CreateFrame("Button", nil, parent)
     button:SetSize(width, height)
-    button:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-    })
+    button.fixedWidth = width
 
     button.kind = kind or "select"
     button.isHovered = false
     button.isSelected = false
-    button.baseTextColor = kind == "action" and { 0.25, 1, 1 } or { 1, 0.35, 0.35 }
+    button.baseTextColor = kind == "action" and { 0.25, 1, 1 } or { 1, 0.82, 0.25 }
     button.hoverTextColor = { 1, 0.82, 0 }
     button.selectedTextColor = { 0.2, 1, 0.2 }
 
     button.text = button:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     button.text:SetPoint("CENTER")
     button.text:SetText(text or "")
+    button.text:SetJustifyH("CENTER")
+    button:SetHitRectInsets(-4, -4, -2, -2)
 
     button:SetScript("OnEnter", function(self)
         self.isHovered = true
@@ -143,32 +146,32 @@ function Core:UpdateInstanceDifficultyButtonStyle(button)
     if not button or not button.text then return end
 
     if not button:IsEnabled() then
-        button:SetBackdropColor(0.08, 0.08, 0.08, 0.6)
-        button:SetBackdropBorderColor(0.18, 0.18, 0.18, 0.8)
         SetTextColor(button.text, { 0.45, 0.45, 0.45 })
+        button:SetAlpha(0.55)
         return
     end
 
     local textColor = button.baseTextColor
-    local bgColor = { 0.08, 0.08, 0.08, 0.85 }
-    local borderColor = { 0.22, 0.22, 0.22, 1 }
+    local alpha = 0.9
 
     if button.isSelected then
         textColor = button.selectedTextColor
-        bgColor = { 0.08, 0.18, 0.08, 0.92 }
-        borderColor = { 0.18, 0.7, 0.18, 1 }
+        alpha = 1
     elseif button.isHovered then
         textColor = button.hoverTextColor
-        bgColor = { 0.15, 0.15, 0.15, 0.92 }
-        borderColor = { 0.8, 0.65, 0.15, 1 }
+        alpha = 1
     elseif button.kind == "action" then
-        bgColor = { 0.08, 0.12, 0.16, 0.92 }
-        borderColor = { 0.16, 0.5, 0.65, 1 }
+        alpha = 0.95
     end
 
-    button:SetBackdropColor(bgColor[1], bgColor[2], bgColor[3], bgColor[4])
-    button:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4])
+    button:SetAlpha(alpha)
     SetTextColor(button.text, textColor)
+end
+
+local function UpdateTextButtonWidth(button, minWidth)
+    if not button or not button.text then return end
+    local width = math.max(button.fixedWidth or 0, minWidth or 42, (button.text:GetStringWidth() or 0) + 12)
+    button:SetWidth(width)
 end
 
 function Core:CanChangeInstanceDifficulty()
@@ -277,15 +280,21 @@ function Core:SetInstanceDifficultyCollapsed(collapsed)
     if not frame then return end
 
     frame.collapsed = collapsed and true or false
-    frame:SetHeight(frame.collapsed and 108 or 214)
+    local isVertical = IDcfg().orientation == "VERTICAL"
+    local expandedWidth = isVertical and 300 or 282
+    local expandedHeight = isVertical and 152 or 132
+    frame:SetSize(frame.collapsed and 236 or expandedWidth, frame.collapsed and 62 or expandedHeight)
 
     local showExpanded = not frame.collapsed
     local showCollapsed = frame.collapsed
 
     frame.dungeonHeader:SetShown(showExpanded)
     frame.raidHeader:SetShown(showExpanded)
-    frame.titleText:SetShown(true)
+    frame.raidSizeLabel:SetShown(showExpanded)
+    frame.raidDifficultyLabel:SetShown(false)
+    frame.titleText:SetShown(false)
     frame.divider:SetShown(showExpanded)
+    frame.statusText:SetShown(false)
     frame.resetButton:SetShown(showExpanded and IDcfg().showResetButton)
 
     for _, button in ipairs(frame.dungeonButtons) do
@@ -299,24 +308,46 @@ function Core:SetInstanceDifficultyCollapsed(collapsed)
     end
 
     frame.collapsedLabel:SetShown(showCollapsed)
-    frame.blessingLeft:SetShown(showCollapsed)
-    frame.blessingRight:SetShown(showCollapsed)
+    frame.blessingLeft:SetShown(false)
+    frame.blessingRight:SetShown(false)
 
+    frame.resetButton:ClearAllPoints()
     frame.teleportButton:ClearAllPoints()
     frame.leaveButton:ClearAllPoints()
 
     if showCollapsed then
-        frame.teleportButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 12)
-        frame.leaveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
+        frame.teleportButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 8)
+        frame.leaveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 8)
         frame.statusText:ClearAllPoints()
-        frame.statusText:SetPoint("TOP", frame, "TOP", 0, -34)
+        frame.statusText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -8)
+        frame.collapsedLabel:ClearAllPoints()
+        frame.collapsedLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -10)
     else
-        frame.teleportButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
-        frame.leaveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
-        frame.resetButton:ClearAllPoints()
-        frame.resetButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 12)
+        local actionGap = 10
+        local totalWidth = 0
+        local shownButtons = {}
+        if frame.resetButton:IsShown() then table.insert(shownButtons, frame.resetButton) end
+        if frame.teleportButton:IsShown() then table.insert(shownButtons, frame.teleportButton) end
+        if frame.leaveButton:IsShown() then table.insert(shownButtons, frame.leaveButton) end
+        for index, button in ipairs(shownButtons) do
+            totalWidth = totalWidth + button:GetWidth()
+            if index > 1 then
+                totalWidth = totalWidth + actionGap
+            end
+        end
+
+        local startX = -(totalWidth / 2)
+        local previous
+        for _, button in ipairs(shownButtons) do
+            if not previous then
+                button:SetPoint("BOTTOMLEFT", frame, "BOTTOM", startX, 8)
+            else
+                button:SetPoint("LEFT", previous, "RIGHT", actionGap, 0)
+            end
+            previous = button
+        end
         frame.statusText:ClearAllPoints()
-        frame.statusText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -14)
+        frame.statusText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 28)
     end
 end
 
@@ -326,20 +357,127 @@ function Core:ApplyInstanceDifficultyFonts()
 
     local cfg = IDcfg()
     local baseSize = math.max(10, math.min(24, cfg.fontSize or 13))
+    local outline = cfg.fontOutline and "OUTLINE" or ""
 
-    frame.titleText:SetFont(STANDARD_TEXT_FONT, baseSize + 2, "OUTLINE")
-    frame.dungeonHeader:SetFont(STANDARD_TEXT_FONT, baseSize + 1, "OUTLINE")
-    frame.raidHeader:SetFont(STANDARD_TEXT_FONT, baseSize + 1, "OUTLINE")
-    frame.collapsedLabel:SetFont(STANDARD_TEXT_FONT, baseSize + 2, "OUTLINE")
-    frame.blessingLeft:SetFont(STANDARD_TEXT_FONT, baseSize + 1, "OUTLINE")
-    frame.blessingRight:SetFont(STANDARD_TEXT_FONT, baseSize + 1, "OUTLINE")
-    frame.statusText:SetFont(STANDARD_TEXT_FONT, math.max(10, baseSize - 1), "OUTLINE")
+    frame.titleText:SetFont(STANDARD_TEXT_FONT, baseSize + 2, outline)
+    frame.dungeonHeader:SetFont(STANDARD_TEXT_FONT, baseSize + 1, outline)
+    frame.raidHeader:SetFont(STANDARD_TEXT_FONT, baseSize + 1, outline)
+    frame.raidSizeLabel:SetFont(STANDARD_TEXT_FONT, baseSize + 1, outline)
+    frame.raidDifficultyLabel:SetFont(STANDARD_TEXT_FONT, math.max(10, baseSize - 1), outline)
+    frame.collapsedLabel:SetFont(STANDARD_TEXT_FONT, baseSize + 2, outline)
+    frame.blessingLeft:SetFont(STANDARD_TEXT_FONT, baseSize + 1, outline)
+    frame.blessingRight:SetFont(STANDARD_TEXT_FONT, baseSize + 1, outline)
+    frame.statusText:SetFont(STANDARD_TEXT_FONT, math.max(10, baseSize - 1), outline)
 
     for _, button in ipairs(frame.allButtons) do
         if button.text then
-            button.text:SetFont(STANDARD_TEXT_FONT, baseSize, "OUTLINE")
+            button.text:SetFont(STANDARD_TEXT_FONT, baseSize, outline)
+            UpdateTextButtonWidth(button, button.kind == "action" and 64 or 44)
         end
     end
+end
+
+function Core:ApplyInstanceDifficultyBackground()
+    local frame = self.instanceDifficultyFrame
+    if not frame or not frame.bg then return end
+
+    local cfg = IDcfg()
+    local texturePath = LibSharedMedia and LibSharedMedia.Fetch and
+        LibSharedMedia:Fetch("statusbar", cfg.backgroundTexture) or nil
+    frame.bg:SetTexture(texturePath or "Interface\\Buttons\\WHITE8x8")
+    frame.bg:SetVertexColor(0.03, 0.08, 0.12, math.max(0, math.min(1, tonumber(cfg.backgroundAlpha) or 0.18)))
+end
+
+function Core:LayoutInstanceDifficultyFrame()
+    local frame = self.instanceDifficultyFrame
+    if not frame then return end
+
+    local function LayoutRow(buttons, startX, y, gap)
+        local cursor = startX
+        for _, button in ipairs(buttons) do
+            button:ClearAllPoints()
+            button:SetPoint("TOPLEFT", frame, "TOPLEFT", cursor, y)
+            cursor = cursor + button:GetWidth() + (gap or 12)
+        end
+    end
+
+    local function LayoutColumn(buttons, startX, startY, gap)
+        local cursor = startY
+        for _, button in ipairs(buttons) do
+            button:ClearAllPoints()
+            button:SetPoint("TOPLEFT", frame, "TOPLEFT", startX, cursor)
+            cursor = cursor - (button:GetHeight() + (gap or 6))
+        end
+    end
+
+    local collapsed = frame.collapsed and true or false
+    local orientation = IDcfg().orientation or "VERTICAL"
+
+    if collapsed then
+        frame.divider:ClearAllPoints()
+        frame.divider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 30)
+        frame.divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 30)
+        return
+    end
+
+    if orientation == "HORIZONTAL" then
+        frame.dungeonHeader:SetText("地下城:")
+        frame.raidHeader:SetText(" 团队:")
+        frame.raidSizeLabel:SetText("人数:")
+
+        local labelLeft = 10
+        local labelWidth = 46
+        local buttonStart = 58
+
+        frame.dungeonHeader:ClearAllPoints()
+        frame.dungeonHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", labelLeft, -12)
+        frame.dungeonHeader:SetWidth(labelWidth)
+        frame.dungeonHeader:SetJustifyH("RIGHT")
+        LayoutRow(frame.dungeonButtons, buttonStart, -10, 8)
+
+        frame.raidHeader:ClearAllPoints()
+        frame.raidHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", labelLeft, -40)
+        frame.raidHeader:SetWidth(labelWidth)
+        frame.raidHeader:SetJustifyH("RIGHT")
+        LayoutRow(frame.raidDifficultyButtons, buttonStart, -38, 8)
+
+        frame.raidSizeLabel:ClearAllPoints()
+        frame.raidSizeLabel:SetPoint("TOPLEFT", frame, "TOPLEFT", labelLeft, -68)
+        frame.raidSizeLabel:SetWidth(labelWidth)
+        frame.raidSizeLabel:SetJustifyH("RIGHT")
+        LayoutRow(frame.raidSizeButtons, buttonStart, -66, 8)
+
+        frame.divider:ClearAllPoints()
+        frame.divider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 22)
+        frame.divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 22)
+        return
+    end
+
+    frame.dungeonHeader:SetText("地下城")
+    frame.raidHeader:SetText("团队")
+    frame.raidSizeLabel:SetText("人数")
+
+    frame.dungeonHeader:ClearAllPoints()
+    frame.dungeonHeader:SetPoint("TOP", frame, "TOPLEFT", 14 + 32, -10)
+    frame.dungeonHeader:SetWidth(64)
+    frame.dungeonHeader:SetJustifyH("CENTER")
+    LayoutColumn(frame.dungeonButtons, 14, -36, 6)
+
+    frame.raidHeader:ClearAllPoints()
+    frame.raidHeader:SetPoint("TOP", frame, "TOPLEFT", 118 + 32, -10)
+    frame.raidHeader:SetWidth(64)
+    frame.raidHeader:SetJustifyH("CENTER")
+    LayoutColumn(frame.raidDifficultyButtons, 118, -36, 6)
+
+    frame.raidSizeLabel:ClearAllPoints()
+    frame.raidSizeLabel:SetPoint("TOP", frame, "TOPLEFT", 222 + 32, -10)
+    frame.raidSizeLabel:SetWidth(64)
+    frame.raidSizeLabel:SetJustifyH("CENTER")
+    LayoutColumn(frame.raidSizeButtons, 222, -36, 6)
+
+    frame.divider:ClearAllPoints()
+    frame.divider:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 10, 22)
+    frame.divider:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -10, 22)
 end
 
 function Core:CreateInstanceDifficultyToast()
@@ -418,6 +556,7 @@ function Core:UpdateInstanceDifficultyButtons()
     if not frame then return end
 
     local state = self:GetInstanceDifficultyState()
+    frame.currentState = state
     local canChange = self:CanChangeInstanceDifficulty()
 
     for _, button in ipairs(frame.dungeonButtons) do
@@ -445,15 +584,7 @@ function Core:UpdateInstanceDifficultyButtons()
     self:UpdateInstanceDifficultyButtonStyle(frame.teleportButton)
     self:UpdateInstanceDifficultyButtonStyle(frame.leaveButton)
 
-    local statusText
-    if canChange then
-        statusText = "当前：可修改难度"
-    elseif IsInGroup() or IsInRaid() then
-        statusText = "当前：队员只读（队长可修改）"
-    else
-        statusText = "当前：单人模式"
-    end
-    frame.statusText:SetText(statusText)
+    frame.statusText:SetText("")
     frame.titleText:SetText(state.canCollapse and "副本助手" or "副本难度助手")
 
     if state.displayText and state.displayText ~= "" then
@@ -467,6 +598,7 @@ function Core:UpdateInstanceDifficultyButtons()
     else
         self:SetInstanceDifficultyCollapsed(false)
     end
+    self:LayoutInstanceDifficultyFrame()
 end
 
 function Core:UpdateInstanceDifficultyVisibility()
@@ -668,12 +800,14 @@ function Core:ApplyInstanceDifficultySettings()
         cfg.point.y or 0)
     frame:SetMovable(not cfg.locked)
     frame:EnableMouse(true)
+    self:ApplyInstanceDifficultyBackground()
 
     frame.resetButton:SetShown(cfg.showResetButton and not frame.collapsed)
     frame.teleportButton:SetShown(cfg.showTeleportButton)
     frame.leaveButton:SetShown(cfg.showLeaveButton)
 
     self:ApplyInstanceDifficultyFonts()
+    self:LayoutInstanceDifficultyFrame()
     self:UpdateInstanceDifficultyEventRegistration()
     self:UpdateInstanceDifficultyButtons()
     self:UpdateInstanceDifficultyVisibility()
@@ -707,33 +841,25 @@ end
 function Core:CreateInstanceDifficultyFrame()
     if self.instanceDifficultyFrame then return end
 
-    local frame = CreateFrame("Frame", addonName .. "InstanceDifficultyFrame", UIParent, "BackdropTemplate")
-    frame:SetSize(330, 214)
+    local frame = CreateFrame("Frame", addonName .. "InstanceDifficultyFrame", UIParent)
+    frame:SetSize(300, 152)
     frame:SetFrameStrata("MEDIUM")
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
-    frame:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 },
-    })
-    frame:SetBackdropColor(0.03, 0.04, 0.05, 0.88)
-    frame:SetBackdropBorderColor(0, 0.55, 0.9, 0.32)
+    frame.bg = frame:CreateTexture(nil, "BACKGROUND")
+    frame.bg:SetAllPoints()
 
     frame.header = frame:CreateTexture(nil, "ARTWORK")
-    frame.header:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-    frame.header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -1, -1)
-    frame.header:SetHeight(28)
-    frame.header:SetColorTexture(0.08, 0.16, 0.24, 0.96)
+    frame.header:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -1)
+    frame.header:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -10, -1)
+    frame.header:SetHeight(1)
+    frame.header:SetColorTexture(0.35, 0.75, 1, 0.22)
 
     frame.divider = frame:CreateTexture(nil, "BORDER")
-    frame.divider:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -64)
-    frame.divider:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -64)
     frame.divider:SetHeight(1)
-    frame.divider:SetColorTexture(0, 0.55, 0.9, 0.22)
+    frame.divider:SetColorTexture(0.35, 0.75, 1, 0.18)
 
     frame:SetScript("OnDragStart", function(self)
         if IDcfg().locked then return end
@@ -745,45 +871,49 @@ function Core:CreateInstanceDifficultyFrame()
     end)
 
     frame.titleText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -8)
+    frame.titleText:SetPoint("TOPLEFT", frame, "TOPLEFT", 16, -10)
     frame.titleText:SetText("副本难度助手")
     frame.titleText:SetTextColor(1, 0.84, 0.2)
+    frame.titleText:Hide()
 
     frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
     frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -2, -2)
     frame.closeButton:SetScript("OnClick", function()
         Core:ToggleInstanceDifficultyFrame(false)
     end)
+    frame.closeButton:Hide()
 
     frame.dungeonHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.dungeonHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -46)
-    frame.dungeonHeader:SetText("地下城难度")
-    frame.dungeonHeader:SetTextColor(1, 0.82, 0)
+    frame.dungeonHeader:SetText("地下城:")
+    frame.dungeonHeader:SetTextColor(0.35, 0.85, 1)
 
     frame.raidHeader = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.raidHeader:SetPoint("TOPLEFT", frame, "TOPLEFT", 178, -46)
-    frame.raidHeader:SetText("团本难度")
-    frame.raidHeader:SetTextColor(1, 0.82, 0)
+    frame.raidHeader:SetText(" 团队:")
+    frame.raidHeader:SetTextColor(1, 0.78, 0.3)
+
+    frame.raidSizeLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    frame.raidSizeLabel:SetText("人数:")
+    frame.raidSizeLabel:SetTextColor(0.45, 1, 0.55)
+
+    frame.raidDifficultyLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    frame.raidDifficultyLabel:SetText("")
+    frame.raidDifficultyLabel:SetTextColor(0.75, 0.85, 1)
 
     frame.collapsedLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    frame.collapsedLabel:SetPoint("TOP", frame, "TOP", 0, -42)
     frame.collapsedLabel:SetTextColor(0.2, 1, 0.2)
     frame.collapsedLabel:Hide()
 
     frame.blessingLeft = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.blessingLeft:SetPoint("TOPLEFT", frame, "TOPLEFT", 18, -68)
     frame.blessingLeft:SetText("欧气满满")
     frame.blessingLeft:SetTextColor(1, 0.82, 0)
     frame.blessingLeft:Hide()
 
     frame.blessingRight = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    frame.blessingRight:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -18, -68)
     frame.blessingRight:SetText("所求必揽")
     frame.blessingRight:SetTextColor(1, 0.82, 0)
     frame.blessingRight:Hide()
 
     frame.statusText = frame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    frame.statusText:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -14)
     frame.statusText:SetTextColor(1, 1, 0)
 
     frame.dungeonButtons = {}
@@ -791,43 +921,37 @@ function Core:CreateInstanceDifficultyFrame()
     frame.raidDifficultyButtons = {}
     frame.allButtons = {}
 
-    for index, info in ipairs(DUNGEON_DIFFICULTIES) do
-        local button = CreateFlatButton(frame, 136, 24, info.label)
-        button:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -70 - (index - 1) * 28)
+    for _, info in ipairs(DUNGEON_DIFFICULTIES) do
+        local button = CreateFlatButton(frame, 64, 20, info.label)
         button.difficultyId = info.id
         button:SetScript("OnClick", function() Core:HandleDungeonDifficultyChange(info.id) end)
         table.insert(frame.dungeonButtons, button)
         table.insert(frame.allButtons, button)
     end
 
-    for index, info in ipairs(RAID_SIZES) do
-        local button = CreateFlatButton(frame, 62, 22, info.label)
-        button:SetPoint("TOPLEFT", frame, "TOPLEFT", 178 + (index - 1) * 68, -70)
+    for _, info in ipairs(RAID_SIZES) do
+        local button = CreateFlatButton(frame, 64, 20, info.label)
         button.raidSize = info.size
         button:SetScript("OnClick", function() Core:HandleRaidSizeChange(info.size) end)
         table.insert(frame.raidSizeButtons, button)
         table.insert(frame.allButtons, button)
     end
 
-    for index, info in ipairs(RAID_DIFFICULTIES) do
-        local button = CreateFlatButton(frame, 136, 24, info.label)
-        button:SetPoint("TOPLEFT", frame, "TOPLEFT", 178, -98 - (index - 1) * 28)
+    for _, info in ipairs(RAID_DIFFICULTIES) do
+        local button = CreateFlatButton(frame, 64, 20, info.label)
         button.raidKey = info.key
         button:SetScript("OnClick", function() Core:HandleRaidDifficultyChange(info.key) end)
         table.insert(frame.raidDifficultyButtons, button)
         table.insert(frame.allButtons, button)
     end
 
-    frame.resetButton = CreateFlatButton(frame, 92, 24, "重置副本", "action")
-    frame.resetButton:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 14, 12)
+    frame.resetButton = CreateFlatButton(frame, 58, 18, "重置", "action")
     frame.resetButton:SetScript("OnClick", function() Core:ResetCurrentInstances() end)
 
-    frame.teleportButton = CreateFlatButton(frame, 92, 24, "传进/出副本", "action")
-    frame.teleportButton:SetPoint("BOTTOM", frame, "BOTTOM", 0, 12)
+    frame.teleportButton = CreateFlatButton(frame, 76, 18, "传进/出", "action")
     frame.teleportButton:SetScript("OnClick", function() Core:TeleportInstance() end)
 
-    frame.leaveButton = CreateFlatButton(frame, 92, 24, "一键退出", "action")
-    frame.leaveButton:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -14, 12)
+    frame.leaveButton = CreateFlatButton(frame, 58, 18, "退出", "action")
     frame.leaveButton:SetScript("OnClick", function() Core:QuickLeaveInstance() end)
 
     table.insert(frame.allButtons, frame.resetButton)
@@ -841,4 +965,6 @@ function Core:CreateInstanceDifficultyFrame()
     end)
 
     self:ApplyInstanceDifficultyFonts()
+    self:LayoutInstanceDifficultyFrame()
+    self:ApplyInstanceDifficultyBackground()
 end

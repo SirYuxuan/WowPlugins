@@ -1,5 +1,6 @@
 local _, ns = ...
 local Core = ns.Core
+local LibSharedMedia = LibStub("LibSharedMedia-3.0")
 
 local S = ns.OptionsShared
 local ID = S.IDcfg
@@ -70,6 +71,60 @@ function ns.BuildInstanceDifficultyOptions()
                 get = function() return ID().fontSize or 13 end,
                 set = function(_, val)
                     ID().fontSize = val
+                    Core:ApplyInstanceDifficultySettings()
+                end,
+            },
+            fontOutline = {
+                type = "toggle",
+                name = "字体描边",
+                order = 6,
+                disabled = function() return not ID().enabled end,
+                get = function() return ID().fontOutline ~= false end,
+                set = function(_, val)
+                    ID().fontOutline = val
+                    Core:ApplyInstanceDifficultySettings()
+                end,
+            },
+            orientation = {
+                type = "select",
+                name = "布局方向",
+                order = 7,
+                disabled = function() return not ID().enabled end,
+                values = {
+                    VERTICAL = "竖排",
+                    HORIZONTAL = "横排",
+                },
+                get = function() return ID().orientation or "VERTICAL" end,
+                set = function(_, val)
+                    ID().orientation = val
+                    Core:ApplyInstanceDifficultySettings()
+                end,
+            },
+            backgroundTexture = {
+                type = "select",
+                dialogControl = "LSM30_Statusbar",
+                name = "背景纹理",
+                order = 8,
+                disabled = function() return not ID().enabled end,
+                values = LibSharedMedia:HashTable("statusbar"),
+                get = function() return ID().backgroundTexture or "Yuxuan" end,
+                set = function(_, val)
+                    ID().backgroundTexture = val
+                    Core:ApplyInstanceDifficultySettings()
+                end,
+            },
+            backgroundAlpha = {
+                type = "range",
+                name = "背景透明度",
+                order = 9,
+                min = 0,
+                max = 1,
+                step = 0.01,
+                isPercent = true,
+                disabled = function() return not ID().enabled end,
+                get = function() return ID().backgroundAlpha or 0.18 end,
+                set = function(_, val)
+                    ID().backgroundAlpha = val
                     Core:ApplyInstanceDifficultySettings()
                 end,
             },

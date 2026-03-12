@@ -315,6 +315,10 @@ local function MIcfg()
         cfg.delveQuickLeaveCustomIcon = ""
     end
 
+    if cfg.delveQuickLeaveTestMode == nil then
+        cfg.delveQuickLeaveTestMode = false
+    end
+
     if not cfg.delveQuickLeavePoint then
         cfg.delveQuickLeavePoint = {
 
@@ -1471,9 +1475,7 @@ function Core:ApplySystemAdjustSettings()
         cfg.npcTimeUseModifier = false
     end
 
-    if cfg.npcTimeShowPhaseAlert == nil then
-        cfg.npcTimeShowPhaseAlert = false
-    end
+    cfg.npcTimeShowPhaseAlert = false
 
 
 
@@ -1948,12 +1950,6 @@ function Core:UpdateMiscEventRegistration()
         self.miscEventFrame:RegisterEvent("NAME_PLATE_UNIT_ADDED")
 
         self.miscEventFrame:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
-    end
-
-
-
-    if systemCfg and systemCfg.npcTimeShowPhaseAlert then
-        self.miscEventFrame:RegisterEvent("CONSOLE_MESSAGE")
     end
 end
 
@@ -4013,7 +4009,7 @@ function Core:UpdateDelveQuickLeaveVisibility()
 
     local cfg = MIcfg()
 
-    if cfg.delveQuickLeaveEnabled and self:IsInDelve() then
+    if cfg.delveQuickLeaveEnabled and (self:IsInDelve() or cfg.delveQuickLeaveTestMode) then
         self.delveQuickLeaveButton:Show()
     else
         self.delveQuickLeaveButton:Hide()
@@ -4384,20 +4380,6 @@ function Core:CreateMiscBar()
             Core:RefreshLevelingTipFrame()
 
             Core:UpdateDelveQuickLeaveVisibility()
-
-            return
-        end
-
-
-
-        if event == "CONSOLE_MESSAGE" then
-            local message = ...
-
-            local cfg = Core.db and Core.db.profile and Core.db.profile.systemAdjust
-
-            if cfg and cfg.npcTimeShowPhaseAlert and npcPhaseAlertReady and type(message) == "string" and string.find(string.lower(message), "new connection", 1, true) then
-                PrintPhaseAlert()
-            end
 
             return
         end
@@ -5179,6 +5161,10 @@ function Core:CreateDelveQuickLeaveButton()
 
         GameTooltip:AddLine("点击后尝试离开当前地下堡。", 1, 1, 1)
 
+        if MIcfg().delveQuickLeaveTestMode and not Core:IsInDelve() then
+            GameTooltip:AddLine("当前为测试显示状态。", 0.45, 0.9, 1)
+        end
+
         if not MIcfg().delveQuickLeaveLocked then
             GameTooltip:AddLine("拖动图标可调整位置。", 0.75, 1, 0.75)
         end
@@ -5190,6 +5176,10 @@ function Core:CreateDelveQuickLeaveButton()
 
     button:SetScript("OnClick", function(_, buttonName)
         if buttonName == "LeftButton" then
+            if MIcfg().delveQuickLeaveTestMode and not Core:IsInDelve() then
+                print("雨轩工具箱：当前为地下堡快速离开测试状态。")
+                return
+            end
             Core:LeaveDelve()
         end
     end)

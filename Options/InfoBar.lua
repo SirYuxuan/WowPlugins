@@ -23,7 +23,7 @@ function ns.BuildInfoBarOptions()
             },
             infoBarLocked = {
                 type = "toggle",
-                name = function() return MI().infoBarLocked and "解锁拖动" or "锁定信息条" end,
+                name = function() return S.GetLockLayoutToggleName(MI().infoBarLocked) end,
                 order = 2,
                 get = function() return MI().infoBarLocked end,
                 set = function(_, val)

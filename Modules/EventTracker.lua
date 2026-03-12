@@ -43,6 +43,17 @@ local function ETcfg()
     return cfg
 end
 
+local function GetEventTrackerAnchorFrame()
+    if Core.GetCoordDisplayFrame then
+        local coordDisplay = Core:GetCoordDisplayFrame()
+        if coordDisplay and coordDisplay:IsShown() then
+            return coordDisplay
+        end
+    end
+
+    return WorldMapFrame
+end
+
 --------------------------------------------------------------------------------
 -- 追踪器对象池
 --------------------------------------------------------------------------------
@@ -54,6 +65,11 @@ local function SetTrackerFont(fontString, size)
     local cfg = ETcfg()
     local outline = cfg.fontOutline and "OUTLINE" or ""
     fontString:SetFont(STANDARD_TEXT_FONT, size or cfg.fontSize, outline)
+end
+
+local function PrintEventTrackerAlert(message)
+    if not message or message == "" then return end
+    print("雨轩工具箱：" .. message)
 end
 
 --------------------------------------------------------------------------------
@@ -100,10 +116,10 @@ local function CreateWeeklyTracker(parent, eventKey)
         self.icon:SetDesaturated(isCompleted)
 
         if isCompleted then
-            self.statusText:SetText("✓ 已完成")
+            self.statusText:SetText("已完成")
             self.statusText:SetTextColor(ETD.Colors.completed[1], ETD.Colors.completed[2], ETD.Colors.completed[3])
         else
-            self.statusText:SetText("✗ 未完成")
+            self.statusText:SetText("未完成")
             self.statusText:SetTextColor(ETD.Colors.notDone[1], ETD.Colors.notDone[2], ETD.Colors.notDone[3])
         end
     end
@@ -232,7 +248,7 @@ local function CreateLoopTimerTracker(parent, eventKey)
     frame.statusBar:SetPoint("TOPLEFT", frame.barBg, "TOPLEFT", 1, -1)
     frame.statusBar:SetPoint("BOTTOMRIGHT", frame.barBg, "BOTTOMRIGHT", -1, 1)
     local barTexture = LibSharedMedia and LibSharedMedia:Fetch("statusbar", "Yuxuan") or
-    "Interface\\TargetingFrame\\UI-StatusBar"
+        "Interface\\TargetingFrame\\UI-StatusBar"
     frame.statusBar:SetStatusBarTexture(barTexture)
 
     -- 名称文本（在进度条上）
@@ -301,9 +317,8 @@ local function CreateLoopTimerTracker(parent, eventKey)
 
         if status.timeLeft <= alertSec then
             self.alertFired[alertKey] = true
-            local msg = format("|cFF33FF99雨轩工具箱|r：|cFFFFD700%s|r 将在 |cFF33FF33%s|r 后开始！",
-                self.data.eventName, ETD.SecondToTime(status.timeLeft))
-            print(msg)
+            local msg = format("%s 将在 %s 后开始！", self.data.eventName, ETD.SecondToTime(status.timeLeft))
+            PrintEventTrackerAlert(msg)
 
             -- 可选：中央提示
             if Core.ShowInstanceDifficultyToast then
@@ -415,21 +430,19 @@ function Core:CreateEventTrackerFrame()
     if self.eventTrackerFrame then return end
     if not WorldMapFrame then return end
 
-    local frame = CreateFrame("Frame", addonName .. "EventTrackerFrame", WorldMapFrame)
-    frame:SetFrameStrata("MEDIUM")
+    local frame = CreateFrame("Frame", addonName .. "EventTrackerFrame", WorldMapFrame, "BackdropTemplate")
+    frame:SetFrameStrata("HIGH")
+    frame:SetFrameLevel(3600)
     frame:SetHeight(30)
 
-    -- 背景
-    frame.bg = frame:CreateTexture(nil, "BACKGROUND")
-    frame.bg:SetAllPoints()
-    frame.bg:SetColorTexture(0.05, 0.05, 0.1, ETcfg().backdropAlpha)
-
-    -- 顶部边线
-    frame.topBorder = frame:CreateTexture(nil, "BORDER")
-    frame.topBorder:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
-    frame.topBorder:SetPoint("TOPRIGHT", frame, "TOPRIGHT", 0, 0)
-    frame.topBorder:SetHeight(1)
-    frame.topBorder:SetColorTexture(0.3, 0.6, 1, 0.3)
+    frame:SetBackdrop({
+        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+        insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    frame:SetBackdropBorderColor(0.32, 0.32, 0.36, 1)
+    frame:SetBackdropColor(0.08, 0.08, 0.09, math.max(0, math.min(0.98, ETcfg().backdropAlpha or 0.6)))
 
     -- 标题（可选，左侧小标题）
     frame.titleText = frame:CreateFontString(nil, "OVERLAY")
@@ -458,11 +471,12 @@ function Core:UpdateEventTrackers()
 
     -- 定位在世界地图下方
     frame:ClearAllPoints()
-    frame:SetPoint("TOPLEFT", WorldMapFrame, "BOTTOMLEFT", 0, -2)
-    frame:SetPoint("TOPRIGHT", WorldMapFrame, "BOTTOMRIGHT", 0, -2)
+    local anchorFrame = GetEventTrackerAnchorFrame()
+    frame:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", 0, -2)
+    frame:SetPoint("TOPRIGHT", anchorFrame, "BOTTOMRIGHT", 0, -2)
 
     -- 更新背景透明度
-    frame.bg:SetColorTexture(0.05, 0.05, 0.1, cfg.backdropAlpha)
+    frame:SetBackdropColor(0.08, 0.08, 0.09, math.max(0, math.min(0.98, cfg.backdropAlpha or 0.6)))
 
     local trackerW = cfg.trackerWidth or TRACKER_WIDTH
     local trackerH = cfg.trackerHeight or TRACKER_HEIGHT

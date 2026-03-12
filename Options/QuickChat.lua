@@ -171,7 +171,7 @@ function ns.BuildQuickChatOptions()
                     },
                     unlocked = {
                         type = "toggle",
-                        name = "解锁拖动",
+                        name = function() return S.GetUnlockLayoutToggleName(QC().unlocked) end,
                         order = 2,
                         get = function() return QC().unlocked end,
                         set = function(_, val)

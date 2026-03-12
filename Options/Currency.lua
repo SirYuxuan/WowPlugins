@@ -270,12 +270,7 @@ function ns.BuildCurrencyOptions()
                             },
                             locked = {
                                 type = "toggle",
-                                name = function()
-                                    if CU().locked then
-                                        return "解除锁定"
-                                    end
-                                    return "锁定框体"
-                                end,
+                                name = function() return S.GetLockLayoutToggleName(CU().locked) end,
                                 order = 2,
                                 get = function() return CU().locked end,
                                 set = function(_, val)

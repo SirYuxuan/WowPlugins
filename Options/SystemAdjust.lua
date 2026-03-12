@@ -38,131 +38,129 @@ function ns.BuildSystemAdjustOptions()
                 type = "group",
                 name = "鼠标提示",
                 order = 20,
-                inline = true,
                 args = {
-                    disableAllTooltips = {
-                        type = "toggle",
-                        name = "禁止鼠标提示",
+                    tooltipBasicGroup = {
+                        type = "group",
+                        name = "基础提示",
                         order = 1,
-                        width = 1.2,
-                        get = function() return MI().disableAllTooltips end,
-                        set = function(_, val)
-                            MI().disableAllTooltips = val
-                            Core:ApplyMiscSettings()
-                        end,
+                        inline = true,
+                        args = {
+                            disableAllTooltips = {
+                                type = "toggle",
+                                name = "禁止鼠标提示",
+                                order = 1,
+                                width = 1.2,
+                                get = function() return MI().disableAllTooltips end,
+                                set = function(_, val)
+                                    MI().disableAllTooltips = val
+                                    Core:ApplyMiscSettings()
+                                end,
+                            },
+                            tooltipFollowCursor = {
+                                type = "toggle",
+                                name = "提示跟随鼠标",
+                                order = 2,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips end,
+                                get = function() return MI().tooltipFollowCursor end,
+                                set = function(_, val)
+                                    MI().tooltipFollowCursor = val
+                                    Core:ApplyMiscSettings()
+                                end,
+                            },
+                            opaqueTooltipBackground = {
+                                type = "toggle",
+                                name = "取消背景透明",
+                                order = 3,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips end,
+                                get = function() return SA().opaqueTooltipBackground end,
+                                set = function(_, val)
+                                    SA().opaqueTooltipBackground = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                            showTooltipHealthBar = {
+                                type = "toggle",
+                                name = "显示提示框血条",
+                                order = 4,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips end,
+                                get = function() return SA().showTooltipHealthBar end,
+                                set = function(_, val)
+                                    SA().showTooltipHealthBar = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                        },
                     },
-                    tooltipFollowCursor = {
-                        type = "toggle",
-                        name = "提示跟随鼠标",
+                    tooltipNpcTimeGroup = {
+                        type = "group",
+                        name = "NPC存活时间",
                         order = 2,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips end,
-                        get = function() return MI().tooltipFollowCursor end,
-                        set = function(_, val)
-                            MI().tooltipFollowCursor = val
-                            Core:ApplyMiscSettings()
-                        end,
-                    },
-                    opaqueTooltipBackground = {
-                        type = "toggle",
-                        name = "取消背景透明",
-                        order = 3,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips end,
-                        get = function()
-                            return SA().opaqueTooltipBackground
-                        end,
-                        set = function(_, val)
-                            SA().opaqueTooltipBackground = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    showTooltipHealthBar = {
-                        type = "toggle",
-                        name = "显示提示框血条",
-                        order = 4,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips end,
-                        get = function()
-                            return SA().showTooltipHealthBar
-                        end,
-                        set = function(_, val)
-                            SA().showTooltipHealthBar = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    showNPCAliveTime = {
-                        type = "toggle",
-                        name = "显示NPC存活时间",
-                        order = 5,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips end,
-                        get = function()
-                            return SA().showNPCAliveTime
-                        end,
-                        set = function(_, val)
-                            SA().showNPCAliveTime = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    npcTimeShowCurrentTime = {
-                        type = "toggle",
-                        name = "显示当前时间",
-                        order = 6,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
-                        get = function() return SA().npcTimeShowCurrentTime end,
-                        set = function(_, val)
-                            SA().npcTimeShowCurrentTime = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    npcTimeShowLayer = {
-                        type = "toggle",
-                        name = "显示位面层",
-                        order = 7,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
-                        get = function() return SA().npcTimeShowLayer end,
-                        set = function(_, val)
-                            SA().npcTimeShowLayer = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    npcTimeShowNPCID = {
-                        type = "toggle",
-                        name = "显示NPC ID",
-                        order = 8,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
-                        get = function() return SA().npcTimeShowNPCID end,
-                        set = function(_, val)
-                            SA().npcTimeShowNPCID = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    npcTimeUseModifier = {
-                        type = "toggle",
-                        name = "按住修饰键时显示",
-                        order = 9,
-                        width = 1.2,
-                        disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
-                        get = function() return SA().npcTimeUseModifier end,
-                        set = function(_, val)
-                            SA().npcTimeUseModifier = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
-                    },
-                    npcTimeShowPhaseAlert = {
-                        type = "toggle",
-                        name = "显示位面切换提示",
-                        order = 10,
-                        width = 1.2,
-                        get = function() return SA().npcTimeShowPhaseAlert end,
-                        set = function(_, val)
-                            SA().npcTimeShowPhaseAlert = val
-                            Core:ApplySystemAdjustSettings()
-                        end,
+                        inline = true,
+                        args = {
+                            showNPCAliveTime = {
+                                type = "toggle",
+                                name = "显示NPC存活时间",
+                                order = 1,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips end,
+                                get = function() return SA().showNPCAliveTime end,
+                                set = function(_, val)
+                                    SA().showNPCAliveTime = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                            npcTimeShowCurrentTime = {
+                                type = "toggle",
+                                name = "显示当前时间",
+                                order = 2,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
+                                get = function() return SA().npcTimeShowCurrentTime end,
+                                set = function(_, val)
+                                    SA().npcTimeShowCurrentTime = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                            npcTimeShowLayer = {
+                                type = "toggle",
+                                name = "显示位面层",
+                                order = 3,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
+                                get = function() return SA().npcTimeShowLayer end,
+                                set = function(_, val)
+                                    SA().npcTimeShowLayer = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                            npcTimeShowNPCID = {
+                                type = "toggle",
+                                name = "显示NPC ID",
+                                order = 4,
+                                width = 1.2,
+                                disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
+                                get = function() return SA().npcTimeShowNPCID end,
+                                set = function(_, val)
+                                    SA().npcTimeShowNPCID = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                            npcTimeUseModifier = {
+                                type = "toggle",
+                                name = "按住修饰键时显示",
+                                order = 5,
+                                width = 1.4,
+                                disabled = function() return MI().disableAllTooltips or not SA().showNPCAliveTime end,
+                                get = function() return SA().npcTimeUseModifier end,
+                                set = function(_, val)
+                                    SA().npcTimeUseModifier = val
+                                    Core:ApplySystemAdjustSettings()
+                                end,
+                            },
+                        },
                     },
                 },
             },

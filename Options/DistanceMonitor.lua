@@ -23,7 +23,7 @@ function ns.BuildDistanceMonitorOptions()
             },
             locked = {
                 type = "toggle",
-                name = function() return DM().locked and "解锁拖动" or "锁定框体" end,
+                name = function() return S.GetLockLayoutToggleName(DM().locked) end,
                 order = 2,
                 disabled = function() return not DM().enabled end,
                 get = function() return DM().locked end,

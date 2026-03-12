@@ -23,7 +23,7 @@ function ns.BuildPerformanceMonitorOptions()
             },
             locked = {
                 type = "toggle",
-                name = function() return PM().locked and "解锁拖动" or "锁定框体" end,
+                name = function() return S.GetLockLayoutToggleName(PM().locked) end,
                 order = 2,
                 disabled = function() return not PM().enabled end,
                 get = function() return PM().locked end,

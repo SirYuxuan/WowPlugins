@@ -197,10 +197,13 @@ function ns.BuildGameBarOptions()
             },
             locked = {
                 type = "toggle",
-                name = "锁定位置",
+                name = function() return ns.OptionsShared.GetLockLayoutToggleName(GB().locked) end,
                 order = 19,
                 get = function() return GB().locked end,
-                set = function(_, v) GB().locked = v end,
+                set = function(_, v)
+                    GB().locked = v
+                    Core:ApplyGameBarSettings()
+                end,
                 disabled = function() return not GB().enabled end,
             },
 
@@ -209,6 +212,7 @@ function ns.BuildGameBarOptions()
                 name = "按钮配置",
                 order = 40,
                 childGroups = "tab",
+                disabled = function() return not GB().enabled end,
                 args = {
                     leftSlots = {
                         type = "group",
@@ -226,7 +230,6 @@ function ns.BuildGameBarOptions()
                         type = "group",
                         name = "炉石",
                         order = 3,
-                        disabled = function() return not GB().enabled end,
                         args = {
                             showBindLocation = {
                                 type = "toggle",
@@ -247,8 +250,9 @@ function ns.BuildGameBarOptions()
                                 values = GetHearthstoneChoices,
                                 get = function() return (GB().hearthstone and GB().hearthstone.left) or "AUTO" end,
                                 set = function(_, v)
-                                    GB().hearthstone = GB().hearthstone or {}; GB().hearthstone.left = v; Core
-                                        :ApplyGameBarSettings()
+                                    GB().hearthstone = GB().hearthstone or {}
+                                    GB().hearthstone.left = v
+                                    Core:ApplyGameBarSettings()
                                 end,
                             },
                             middle = {
@@ -259,8 +263,9 @@ function ns.BuildGameBarOptions()
                                 values = GetHearthstoneChoices,
                                 get = function() return (GB().hearthstone and GB().hearthstone.middle) or "RANDOM" end,
                                 set = function(_, v)
-                                    GB().hearthstone = GB().hearthstone or {}; GB().hearthstone.middle = v; Core
-                                        :ApplyGameBarSettings()
+                                    GB().hearthstone = GB().hearthstone or {}
+                                    GB().hearthstone.middle = v
+                                    Core:ApplyGameBarSettings()
                                 end,
                             },
                             right = {
@@ -271,8 +276,9 @@ function ns.BuildGameBarOptions()
                                 values = GetHearthstoneChoices,
                                 get = function() return (GB().hearthstone and GB().hearthstone.right) or "AUTO" end,
                                 set = function(_, v)
-                                    GB().hearthstone = GB().hearthstone or {}; GB().hearthstone.right = v; Core
-                                        :ApplyGameBarSettings()
+                                    GB().hearthstone = GB().hearthstone or {}
+                                    GB().hearthstone.right = v
+                                    Core:ApplyGameBarSettings()
                                 end,
                             },
                         },

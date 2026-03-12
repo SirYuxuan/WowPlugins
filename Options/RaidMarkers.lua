@@ -22,7 +22,7 @@ function ns.BuildRaidMarkersOptions()
             },
             raidMarkersLocked = {
                 type = "toggle",
-                name = function() return MI().raidMarkersLocked and "解锁拖动" or "锁定框体" end,
+                name = function() return S.GetLockLayoutToggleName(MI().raidMarkersLocked) end,
                 order = 2,
                 disabled = function() return not MI().raidMarkersEnabled end,
                 get = function() return MI().raidMarkersLocked end,

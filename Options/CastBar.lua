@@ -134,7 +134,7 @@ function ns.BuildCastBarOptions()
                 args = {
                     locked = {
                         type = "toggle",
-                        name = "锁定位置",
+                        name = function() return S.GetLockLayoutToggleName(CBcfg().locked) end,
                         order = 1,
                         get = function() return CBcfg().locked end,
                         set = function(_, v)

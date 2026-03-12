@@ -23,7 +23,7 @@ function ns.BuildQuestToolsOptions()
             },
             questToolsLocked = {
                 type = "toggle",
-                name = function() return MI().questToolsLocked and "解锁拖动" or "锁定框体" end,
+                name = function() return S.GetLockLayoutToggleName(MI().questToolsLocked) end,
                 order = 2,
                 disabled = function() return not MI().questToolsEnabled end,
                 get = function() return MI().questToolsLocked end,

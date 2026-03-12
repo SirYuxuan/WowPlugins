@@ -25,3 +25,11 @@ function S.IDcfg() return Core.db.profile.instanceDifficulty end
 function S.CBcfg() return Core.db.profile.castBar end
 
 function S.MGcfg() return Core.db.profile.mapGuide end
+
+function S.GetLockLayoutToggleName(isLocked)
+    return isLocked and "已锁定布局" or "已解锁布局"
+end
+
+function S.GetUnlockLayoutToggleName(isUnlocked)
+    return isUnlocked and "已解锁布局" or "已锁定布局"
+end

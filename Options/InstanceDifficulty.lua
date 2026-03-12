@@ -37,7 +37,7 @@ function ns.BuildInstanceDifficultyOptions()
             },
             locked = {
                 type = "toggle",
-                name = function() return ID().locked and "解锁拖动" or "锁定框体" end,
+                name = function() return S.GetLockLayoutToggleName(ID().locked) end,
                 order = 3,
                 disabled = function() return not ID().enabled end,
                 get = function() return ID().locked end,
@@ -82,6 +82,34 @@ function ns.BuildInstanceDifficultyOptions()
                 get = function() return ID().fontOutline ~= false end,
                 set = function(_, val)
                     ID().fontOutline = val
+                    Core:ApplyInstanceDifficultySettings()
+                end,
+            },
+            normalTextColor = {
+                type = "color",
+                name = "未选中颜色",
+                order = 6.1,
+                disabled = function() return not ID().enabled end,
+                get = function()
+                    local c = ID().normalTextColor or { r = 1, g = 0.82, b = 0.25 }
+                    return c.r, c.g, c.b
+                end,
+                set = function(_, r, g, b)
+                    ID().normalTextColor = { r = r, g = g, b = b }
+                    Core:ApplyInstanceDifficultySettings()
+                end,
+            },
+            selectedTextColor = {
+                type = "color",
+                name = "已选中颜色",
+                order = 6.2,
+                disabled = function() return not ID().enabled end,
+                get = function()
+                    local c = ID().selectedTextColor or { r = 0.2, g = 1, b = 0.2 }
+                    return c.r, c.g, c.b
+                end,
+                set = function(_, r, g, b)
+                    ID().selectedTextColor = { r = r, g = g, b = b }
                     Core:ApplyInstanceDifficultySettings()
                 end,
             },

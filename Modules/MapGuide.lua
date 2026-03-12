@@ -1285,6 +1285,13 @@ end
 
 function Core:ToggleCoordDisplay()
     ToggleCoordDisplay()
+    if self.UpdateEventTrackers then
+        self:UpdateEventTrackers()
+    end
+end
+
+function Core:GetCoordDisplayFrame()
+    return coordFrame
 end
 
 function Core:ShowQuickAddPopup()

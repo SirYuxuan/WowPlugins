@@ -87,7 +87,7 @@ end
 -- 事件列表（显示顺序）
 --------------------------------------------------------------------------------
 ETD.EventList = {
-    -- 午夜 (Midnight)
+    -- 至暗之夜 (Midnight)
     "WeeklyMN",
     "ProfessionsWeeklyMN",
     "StormarionAssault",
@@ -106,16 +106,16 @@ ETD.EventList = {
 --------------------------------------------------------------------------------
 ETD.EventData = {
     ---------------------------------------------------------------------------
-    -- ████ 午夜 (Midnight) ████
+    -- ████ 至暗之夜 (Midnight) ████
     ---------------------------------------------------------------------------
 
-    -- 午夜周常任务
+    -- 至暗之夜周常任务
     WeeklyMN = {
         dbKey = "weeklyMN",
         type = "weekly",
         icon = 236681,
-        label = "周常(午夜)",
-        eventName = "周常任务 (午夜)",
+        label = "周常(至暗之夜)",
+        eventName = "周常任务 (至暗之夜)",
         location = SafeMapName(2537),
         mapID = 2537,
         questGroups = {
@@ -147,25 +147,25 @@ ETD.EventData = {
         },
     },
 
-    -- 午夜专业周常
+    -- 至暗之夜专业周常
     ProfessionsWeeklyMN = {
         dbKey = "professionsWeeklyMN",
         type = "weekly",
         icon = 1392955,
-        label = "专业周常(午夜)",
-        eventName = "专业周常 (午夜)",
+        label = "专业周常(至暗之夜)",
+        eventName = "专业周常 (至暗之夜)",
         location = SafeMapName(2393),
         mapID = 2393,
         useProfessionQuests = true, -- 标记使用专业匹配逻辑
     },
 
-    -- 暴行突袭 (Stormarion Assault)
+    -- 斯托玛兰突袭战 (Stormarion Assault)
     StormarionAssault = {
         dbKey = "stormarionAssault",
         type = "loopTimer",
         icon = 7431083,
-        label = "暴行突袭",
-        eventName = "暴行突袭",
+        label = "斯托玛兰突袭战",
+        eventName = "斯托玛兰突袭战",
         location = SafeMapName(2405),
         mapID = 2405,
         questIDs = { 90962 },
@@ -217,13 +217,13 @@ ETD.EventData = {
         },
     },
 
-    -- 至暗之夜 (Nightfall)
+    -- 夜幕激斗 (Nightfall)
     Nightfall = {
         dbKey = "nightfall",
         type = "loopTimer",
         icon = 6694198,
-        label = "至暗之夜",
-        eventName = "至暗之夜",
+        label = "夜幕激斗",
+        eventName = "夜幕激斗",
         location = SafeMapName(2215),
         mapID = 2215,
         questIDs = { 91173 },

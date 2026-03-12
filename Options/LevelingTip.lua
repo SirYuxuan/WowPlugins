@@ -26,7 +26,7 @@ function ns.BuildLevelingTipOptions()
             },
             locked = {
                 type = "toggle",
-                name = function() return MI().levelingTipLocked and "解锁拖动" or "锁定框体" end,
+                name = function() return S.GetLockLayoutToggleName(MI().levelingTipLocked) end,
                 order = 2,
                 disabled = function() return not MI().levelingTipEnabled end,
                 get = function() return MI().levelingTipLocked end,

@@ -29,7 +29,7 @@ function ns.BuildAttributeOptions()
                     locked = {
                         type = "toggle",
                         order = 2,
-                        name = function() return AT().locked and "解除锁定" or "锁定框架" end,
+                        name = function() return S.GetLockLayoutToggleName(AT().locked) end,
                         get = function() return AT().locked end,
                         set = function(_, val)
                             AT().locked = val; Core:ApplyAttributeSettings()

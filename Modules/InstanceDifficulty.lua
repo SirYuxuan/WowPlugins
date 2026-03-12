@@ -56,6 +56,8 @@ local function IDcfg()
     if cfg.frameScale == nil then cfg.frameScale = 1 end
     if cfg.fontSize == nil then cfg.fontSize = 13 end
     if cfg.fontOutline == nil then cfg.fontOutline = true end
+    if cfg.normalTextColor == nil then cfg.normalTextColor = { r = 1, g = 0.82, b = 0.25 } end
+    if cfg.selectedTextColor == nil then cfg.selectedTextColor = { r = 0.2, g = 1, b = 0.2 } end
     if cfg.orientation == nil then cfg.orientation = "VERTICAL" end
     if cfg.backgroundTexture == nil then cfg.backgroundTexture = "Yuxuan" end
     if cfg.backgroundAlpha == nil then cfg.backgroundAlpha = 0.18 end
@@ -144,6 +146,14 @@ end
 
 function Core:UpdateInstanceDifficultyButtonStyle(button)
     if not button or not button.text then return end
+
+    local cfg = IDcfg()
+    if button.kind ~= "action" then
+        local base = cfg.normalTextColor or { r = 1, g = 0.82, b = 0.25 }
+        local selected = cfg.selectedTextColor or { r = 0.2, g = 1, b = 0.2 }
+        button.baseTextColor = { base.r or 1, base.g or 0.82, base.b or 0.25 }
+        button.selectedTextColor = { selected.r or 0.2, selected.g or 1, selected.b or 0.2 }
+    end
 
     if not button:IsEnabled() then
         SetTextColor(button.text, { 0.45, 0.45, 0.45 })

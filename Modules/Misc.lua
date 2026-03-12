@@ -1253,21 +1253,21 @@ local function TargetArrowPassesFilter(cfg)
             return true
         end
 
-        local creatureType = UnitCreatureType and UnitCreatureType("target") or ""
-
-        if creatureType == "Pet" then
-            return true
-        end
+        local ok, isPet = pcall(function()
+            local t = UnitCreatureType and UnitCreatureType("target") or ""
+            return t == "Pet"
+        end)
+        if ok and isPet then return true end
     end
 
 
 
     if cfg.targetArrowShowCritter then
-        local creatureType = UnitCreatureType and UnitCreatureType("target") or ""
-
-        if creatureType == "Critter" then
-            return true
-        end
+        local ok, isCritter = pcall(function()
+            local t = UnitCreatureType and UnitCreatureType("target") or ""
+            return t == "Critter"
+        end)
+        if ok and isCritter then return true end
     end
 
 

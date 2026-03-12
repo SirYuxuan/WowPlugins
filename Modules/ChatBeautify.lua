@@ -42,7 +42,7 @@ local function GetShortChannelName(channelName)
 end
 
 local function AbbreviateChatChannelLinks(message)
-    if type(message) ~= "string" or message == "" then
+    if type(message) ~= "string" or #message == 0 then
         return message
     end
 

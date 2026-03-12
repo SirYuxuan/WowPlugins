@@ -1,8 +1,8 @@
 ## Interface: 120000, 120001
 ## Title: 雨轩工具箱
 ## Notes: 快捷频道切换、自定义指令按钮、属性显示、施法条、全地图NPC标记
-## Author: YuXuan
-## Version: 2.0.0
+## Author: Sir丶雨轩
+## Version: 3.0.0
 ## SavedVariables: YuXuanToolboxDB
 ## IconTexture: Interface\AddOns\YuXuanToolbox\Resource\Icon.tga
 

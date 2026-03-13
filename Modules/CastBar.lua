@@ -344,8 +344,10 @@ local function ReadUnitCast(unit)
         if name then kind = "channel" end
     end
     if not name or not startMS or not endMS then return nil end
-    local startSec = startMS / 1000
-    local endSec = endMS / 1000
+    local ok, startSec, endSec = pcall(function()
+        return startMS / 1000, endMS / 1000
+    end)
+    if not ok then return nil end
     return kind, name, texture, startSec, endSec
 end
 

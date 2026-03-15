@@ -2,6 +2,8 @@
 local _, ns = ...
 local Core = ns.Core
 local LibSharedMedia = LibStub("LibSharedMedia-3.0")
+local ShowCurrencyTooltip
+local HideCurrencyTooltip
 
 local DEFAULT_MONEY_ICON = 133784
 
@@ -441,13 +443,17 @@ local function BuildTooltipLabel(data)
     return iconMarkup .. " " .. (data.name or ("ID " .. tostring(data.id or ""))), countText
 end
 
-local function ShowCurrencyTooltip(frame)
+ShowCurrencyTooltip = function(frame)
     if not frame or not Core.db or not Core.db.profile.currency.enabled then
         return
     end
 
     local entries = Core:GetCurrencyDisplayEntries()
-    GameTooltip:SetOwner(frame, "ANCHOR_BOTTOM", 0, -8)
+    local scale = UIParent:GetEffectiveScale()
+    local cursorX, cursorY = GetCursorPosition()
+    GameTooltip:SetOwner(frame, "ANCHOR_NONE")
+    GameTooltip:ClearAllPoints()
+    GameTooltip:SetPoint("BOTTOM", UIParent, "BOTTOMLEFT", cursorX / scale, cursorY / scale + 20)
     GameTooltip:ClearLines()
     GameTooltip:AddLine("货币状态条", 1, 0.82, 0)
     GameTooltip:AddLine(" ")
@@ -460,7 +466,7 @@ local function ShowCurrencyTooltip(frame)
     GameTooltip:Show()
 end
 
-local function HideCurrencyTooltip(frame)
+HideCurrencyTooltip = function(frame)
     if GameTooltip:IsOwned(frame) then
         GameTooltip:Hide()
     end
